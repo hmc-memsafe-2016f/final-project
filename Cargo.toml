@@ -1,0 +1,6 @@
+[package]
+name = "memsafe_graph"
+version = "0.1.0"
+authors = ["Dan Obermiller <dobermiller16@cmc.edu>"]
+
+[dependencies]
