@@ -60,7 +60,12 @@ impl for Graph<'a, NodeType, EdgeType, G> {
 
   /// Returns an iterator of the neighbors of a node
   fn neighbors<'b: 'a>(&'a self, &'a NodeIter<'a, 'b, NodeType>) -> NodeIter<'a, 'b, NodeType>;
+  /// Returns an iterator of the neighbors of a node based on a given direction.
   fn neighbors_direction<'b: 'a>(&'a self, &'a NodeIter<'a, 'b, NodeType>, Direction) -> NodeIter<'a, 'b, NodeType>;
+  /// Returns the number of neighbors of a node
+  fn degree<'b: 'a>(&'a self, &'a NodeIter<'a, 'b, NodeType>) -> usize;
+  /// Returns the number of neighbors of a node in a given direction
+  fn degree<'b: 'a>(&'a self, &'a NodeIter<'a, 'b, NodeType>, Direction) -> usize;
 
   /// Returns the endpoints of an edge
   fn endpoints<'b: 'a>(&'a self, &'a EdgeIter<'a, 'b, EdgeType>) -> (NodeIter<'a, 'b, NodeType>, NodeIter<'a, 'b, NodeType>);
