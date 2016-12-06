@@ -39,6 +39,13 @@ impl<V, E> Graph<V, E> {
     /// vertex.
     #[allow(unused_variables)]
     //pub fn add_vertex(&'a mut self, v: Vertex<V>) -> 'a Iter {
+    //TODO Alex, is it even possible to put a lifetime to a nonreference opject
+    //as we want to do here? We want to ensure that Iter will not outlive the
+    //graph for saftey reasons.
+    //One of our ideas for making this work would be to have an Iter contain a
+    //reference to an index and insist the the Iter not outlive that reference.
+    //We could then return an Iter out of references that do not outlive
+    //their graph.
     pub fn add_vertex(&mut self, v: Vertex<V>) -> Iter {
         Iter {}
     }
@@ -47,7 +54,7 @@ impl<V, E> Graph<V, E> {
     #[allow(unused_variables)]
     pub fn add_edge(&mut self, v1: &Iter, v2: &Iter, value: E) -> bool {
         //TODO Ask Alex if this return type is weird (gets back to the "should
-        //we have edge Iters?" question.
+        //we have edge Iters?" question).
         true
     }
     /// Returns the old value associated with vertex v and replaces it with the
@@ -69,6 +76,10 @@ impl<V, E> Graph<V, E> {
     /// Iters from being used after their invalidation.
     #[allow(unused_variables)]
     pub fn delete_vertex(self, v: Iter) -> Self {
+        //TODO Alex, is this appropriate? Our plan was to consume the Graph
+        //in any method which invalidates iterators so that all iterators from
+        //before the call can be statically determined to be invalid after
+        //a call to a method that consumes self.
         self
     }
     /// Returns Some(value) associated with the edge between v1 and v2 or None
@@ -88,6 +99,7 @@ impl<V, E> Graph<V, E> {
     #[allow(unused_variables)]
     pub fn contract_edge(self, v1: Iter, v2: Iter) ->
         //('a Self, Option<'a Iter>) {
+        //TODO Hi Alex, this is the same issue as the other lifetime question.
         (Self, Option<Iter>) {
             (self, None)
     }
