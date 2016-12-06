@@ -9,17 +9,15 @@
 use std::marker::PhantomData;
 
 pub struct Graph<V, E> {
-    //phantom: PhantomData<(V, E)>,
+    phantom: PhantomData<(V, E)>,
 }
 pub struct Vertex<V> {
-    //value: PhantomData<V>,
+    value: PhantomData<V>,
 }
 pub struct Edge<V, E> {
-    /*
     weight: PhantomData<E>,
     parent: PhantomData<V>,
     child: PhantomData<V>,
-    */
 }
 
 // Directed/Undirected vs Just undirected
@@ -37,14 +35,17 @@ pub struct Edge<V, E> {
 impl<V, E> Graph<V, E> {
     /// Create a new, empty graph
     pub fn new() -> Self {
-        Graph {}
-        //Graph { phantom: default() }
+        Graph { phantom: Default::default() }
     }
     /// Construct a graph without data, just for its topology
     pub fn new_from_edges(edges: Vec<(u32, u32)>) -> Self {
-        //Graph { phantom: default() }
-        Graph {}
+        Graph { phantom: Default::default() }
     }
+    /// Add a vertex to a graph
+    pub fn add_vertex(v: Vertex<V>) -> Self {
+        Graph { phantom: Default::default() }
+    }
+
 }
 
 /*
