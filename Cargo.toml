@@ -1,6 +1,7 @@
 [package]
 name = "memsafe-final-project"
 version = "0.1.0"
-authors = ["Michael Sheely <msheely@hmc.edu>"]
+authors = ["Michael Sheely <msheely@hmc.edu>",
+        "Jackson Warley <jtwarley@gmail.com>"]
 
 [dependencies]
