@@ -20,8 +20,8 @@ pub struct Edge<V, E> {
     weight: PhantomData<E>,
 }
 
-struct iterator {}
-//TODO Ask Alex, is it bad to not have an iterator for edges? Petgraph does...
+pub struct Iter {}
+//TODO Ask Alex, is it bad to not have an Iter for edges? Petgraph does...
 //Not doing so means replace_edge is not constant time.
 
 impl<V, E> Graph<V, E> {
@@ -34,63 +34,66 @@ impl<V, E> Graph<V, E> {
     pub fn new_from_edges(edges: Vec<(u32, u32)>) -> Self {
         Graph { phantom: Default::default() }
     }
-    /// Add a vertex to a graph, returning an iterator to the inserted vertex.
-    /// The lifetime of the iterator is limited to the lifetime of the inserted
+    /// Add a vertex to a graph, returning an Iter to the inserted vertex.
+    /// The lifetime of the Iter is limited to the lifetime of the inserted
     /// vertex.
     #[allow(unused_variables)]
-    pub fn add_vertex(&'a mut self, v: Vertex<V>) -> 'a iterator {
-        //TODO return an iterator???profit
+    //pub fn add_vertex(&'a mut self, v: Vertex<V>) -> 'a Iter {
+    pub fn add_vertex(&mut self, v: Vertex<V>) -> Iter {
+        Iter {}
     }
     /// Add an edge to a graph if there is not currently an edge between those
     /// vertices.  Returns true if successful, and false otherwise.
     #[allow(unused_variables)]
-    pub fn add_edge(&mut self, v1: iterator, v2: iterator, value: E) -> bool {
+    pub fn add_edge(&mut self, v1: &Iter, v2: &Iter, value: E) -> bool {
         //TODO Ask Alex if this return type is weird (gets back to the "should
-        //we have edge iterators?" question.
+        //we have edge Iters?" question.
         true
     }
     /// Returns the old value associated with vertex v and replaces it with the
     /// given value.
     #[allow(unused_variables)]
-    pub fn replace_vertex(&mut self, value: V, v: iterator) -> V {
+    pub fn replace_vertex(&mut self, v: &Iter, value: V) -> PhantomData<V> {
         Default::default()
     }
     /// Returns the E which was stored between vertices v1 and v2, leaving the
     /// value in its place, unless there was no such edge, in which case it
     /// lets the value die and returns None.
     #[allow(unused_variables)]
-    pub fn replace_edge(&mut self, value: E, v1: iterator, v2: iterator) ->
+    pub fn replace_edge(&mut self, v1: &Iter, v2: &Iter, value: E) ->
         Option<E> {
         None
     }
     /// Delete vertex from a graph, returning a new Graph.
     /// We consume the Graph object so that the compiler prevents existing
-    /// iterators from being used after their invalidation.
+    /// Iters from being used after their invalidation.
     #[allow(unused_variables)]
-    pub fn delete_vertex(self, v: Vertex<V>) -> Self {
+    pub fn delete_vertex(self, v: Iter) -> Self {
+        self
     }
     /// Returns Some(value) associated with the edge between v1 and v2 or None
     /// if there was no such edge.
     #[allow(unused_variables)]
-    pub fn delete_edge(&mut self, v1: Vertex<V>, v2: Vertex<V>) -> Option<E> {
+    pub fn delete_edge(&mut self, v1: &Iter, v2: &Iter) -> Option<E> {
         None
     }
     /// Returns a vector of terators neighboring the given vertex.
     #[allow(unused_variables)]
-    pub fn get_neighbors(&self, v: iterator) -> Vec<iterator> {
+    pub fn get_neighbors(&self, v: &Iter) -> Vec<Iter> {
         Vec::new()
     }
-    /// Returns a pair (Graph, Option<iterator>) where the element one is a new
-    /// Graph and element two is an iterator to the vertex which results from
+    /// Returns a pair (Graph, Option<Iter>) where the element one is a new
+    /// Graph and element two is an Iter to the vertex which results from
     /// contracting the given edge, or None if the edge did not exist.
     #[allow(unused_variables)]
-    pub fn contract_edge(self, v1: iterator, v2: iterator) ->
-        ('a Self, Option<'a iterator>) {
+    pub fn contract_edge(self, v1: Iter, v2: Iter) ->
+        //('a Self, Option<'a Iter>) {
+        (Self, Option<Iter>) {
             (self, None)
     }
     /// Returns whether or not the given vertices are adjacent.
     #[allow(unused_variables)]
-    pub fn contract_edge(&self, v1: iterator, v2: iterator) -> bool {
+    pub fn adjacent(&self, v1: &Iter, v2: &Iter) -> bool {
         true
     }
     /// Returns the number of vertices in the graph.
@@ -111,7 +114,7 @@ impl<V, E> Graph<V, E> {
     }
     /// Returns the Laplacian matrix for the given graph.
     #[allow(unused_variables)]
-    pub fn get_adjacency_matrix(&self) -> Vec<Vec<isize> > {
+    pub fn get_laplacian(&self) -> Vec<Vec<isize> > {
         Vec::new()
     }
     /// Returns the number of connected components in the graph.
