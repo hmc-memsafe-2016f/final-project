@@ -19,6 +19,8 @@ Graphs also implement STL traits like Collection, allowing them to play nicely w
 
 petgraph allows the creation of parallel edges, as well as the creation of edges from a vertex to itself. It does provide a method that creates edges that cannot be parallel, but there's no easy way to check if parallel or self-edges exist, and while there are some cases where this is useful (FSMs), there are also many cases where it is invalid.
 
+The main issue with petgraph is panics. If it's possible for graph operations to invalidate your indices, or for you to accidentally call things with invalid indices, that makes checking your code for panics harder. Other graph implementations that might use unsafe pointer stuff to have nodes connect to each other won't have the problem of invalid nodes panicking. Even though the implementation may be unsafe, the API ends up being safer for the user.
+
 4. CSR tells us that it is internally represented as an adjacency matrix, i.e. a VxV matrix where V is the number of vertices, where the value at (x, y) tells you what the weight of the edge is from x to y if any.
 Graph and StableGraph both seem like a list of vertices, each with a list of edges of the vertices that they connect to.
 GraphMap is probably a HashMap of Nodes, each of which also has a list of related edges.
