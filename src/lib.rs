@@ -15,9 +15,9 @@ pub struct Vertex<V> {
     value: PhantomData<V>,
 }
 pub struct Edge<V, E> {
+    parent: PhantomData<Vertex<V>>,
+    child: PhantomData<Vertex<V>>,
     weight: PhantomData<E>,
-    parent: PhantomData<V>,
-    child: PhantomData<V>,
 }
 
 // Directed/Undirected vs Just undirected
@@ -38,13 +38,23 @@ impl<V, E> Graph<V, E> {
         Graph { phantom: Default::default() }
     }
     /// Construct a graph without data, just for its topology
+    #[allow(unused_variables)]
     pub fn new_from_edges(edges: Vec<(u32, u32)>) -> Self {
         Graph { phantom: Default::default() }
     }
     /// Add a vertex to a graph
-    pub fn add_vertex(v: Vertex<V>) -> Self {
-        Graph { phantom: Default::default() }
+    #[allow(unused_variables)]
+    pub fn add_vertex(v: Vertex<V>) -> () {
     }
+    /// Add an edge to a graph
+    #[allow(unused_variables)]
+    pub fn add_edge(v1: Vertex<V>, v2: Vertex<V>, value: E) -> () {
+    }
+    /// Delete vertex from a grpah (invalidating all theorems?)
+    #[allow(unused_variables)]
+    pub fn delete_vertex(v: Vertex<V>) -> () {
+    }
+
 
 }
 
