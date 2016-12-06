@@ -8,32 +8,46 @@
 
 use std::marker::PhantomData;
 
+/// A data structure which represents a mathematical graph.
+/// It is implemented as an adjacency list (a vector of Linked Lists) together
+/// with a Vector of Boxed vertices.
 pub struct Graph<V, E> {
     phantom: PhantomData<(V, E)>,
 }
+
+/// A vertex, can be inserted into a Graph and holds data of arbitrary type.
 pub struct Vertex<V> {
     value: PhantomData<V>,
 }
-pub struct Edge<V, E> {
-    parent: PhantomData<Vertex<V>>,
-    child: PhantomData<Vertex<V>>,
+
+/// A private struct in the Graph's adjacency list which keeps indices to
+/// both endpoints and the data associated with the edge.
+#[allow(dead_code)]
+struct Edge<E> {
+    parent: usize,
+    child: usize,
     weight: PhantomData<E>,
 }
 
+/// A struct which keeps track of the location of a vertex within the Graph
+/// struct.  Can be used to iterate over vertices in an arbitrary order.
 pub struct Iter {}
 //TODO Ask Alex, is it bad to not have an Iter for edges? Petgraph does...
 //Not doing so means replace_edge is not constant time.
 
 impl<V, E> Graph<V, E> {
+
     /// Create a new, empty graph
     pub fn new() -> Self {
         Graph { phantom: Default::default() }
     }
+
     /// Construct a graph without data, just for its topology
     #[allow(unused_variables)]
     pub fn new_from_edges(edges: Vec<(u32, u32)>) -> Self {
         Graph { phantom: Default::default() }
     }
+
     /// Add a vertex to a graph, returning an Iter to the inserted vertex.
     /// The lifetime of the Iter is limited to the lifetime of the inserted
     /// vertex.
@@ -49,6 +63,7 @@ impl<V, E> Graph<V, E> {
     pub fn add_vertex(&mut self, v: Vertex<V>) -> Iter {
         Iter {}
     }
+
     /// Add an edge to a graph if there is not currently an edge between those
     /// vertices.  Returns true if successful, and false otherwise.
     #[allow(unused_variables)]
@@ -57,12 +72,14 @@ impl<V, E> Graph<V, E> {
         //we have edge Iters?" question).
         true
     }
+
     /// Returns the old value associated with vertex v and replaces it with the
     /// given value.
     #[allow(unused_variables)]
     pub fn replace_vertex(&mut self, v: &Iter, value: V) -> PhantomData<V> {
         Default::default()
     }
+
     /// Returns the E which was stored between vertices v1 and v2, leaving the
     /// value in its place, unless there was no such edge, in which case it
     /// lets the value die and returns None.
@@ -71,6 +88,7 @@ impl<V, E> Graph<V, E> {
         Option<E> {
         None
     }
+
     /// Delete vertex from a graph, returning a new Graph.
     /// We consume the Graph object so that the compiler prevents existing
     /// Iters from being used after their invalidation.
@@ -82,17 +100,20 @@ impl<V, E> Graph<V, E> {
         //a call to a method that consumes self.
         self
     }
+
     /// Returns Some(value) associated with the edge between v1 and v2 or None
     /// if there was no such edge.
     #[allow(unused_variables)]
     pub fn delete_edge(&mut self, v1: &Iter, v2: &Iter) -> Option<E> {
         None
     }
+
     /// Returns a vector of terators neighboring the given vertex.
     #[allow(unused_variables)]
     pub fn get_neighbors(&self, v: &Iter) -> Vec<Iter> {
         Vec::new()
     }
+
     /// Returns a pair (Graph, Option<Iter>) where the element one is a new
     /// Graph and element two is an Iter to the vertex which results from
     /// contracting the given edge, or None if the edge did not exist.
@@ -103,32 +124,38 @@ impl<V, E> Graph<V, E> {
         (Self, Option<Iter>) {
             (self, None)
     }
+
     /// Returns whether or not the given vertices are adjacent.
     #[allow(unused_variables)]
     pub fn adjacent(&self, v1: &Iter, v2: &Iter) -> bool {
         true
     }
+
     /// Returns the number of vertices in the graph.
     #[allow(unused_variables)]
     pub fn num_vertices(&self) -> usize {
         0
     }
+
     /// Returns the number of edges in the graph.
     #[allow(unused_variables)]
     pub fn num_edges(&self) -> usize {
         0
     }
+
     /// Returns the adjacency matrix for the given graph.
     #[allow(unused_variables)]
     pub fn get_adjacency_matrix(&self) -> Vec<Vec<&E> > {
         //TODO Ask Alex if Vec<Vec>> is a reasonable matrix representation.
         Vec::new()
     }
+
     /// Returns the Laplacian matrix for the given graph.
     #[allow(unused_variables)]
     pub fn get_laplacian(&self) -> Vec<Vec<isize> > {
         Vec::new()
     }
+
     /// Returns the number of connected components in the graph.
     #[allow(unused_variables)]
     pub fn num_components(&self) -> usize {
