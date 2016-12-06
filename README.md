@@ -1,4 +1,7 @@
 # final-project
-A repository to submit their final project PRs against
+Part 1:
+Petgraph API review is in `petgraphreview.md`.
 
-Students may want to modify this README
+The API specification is in `src/lib.rs`.
+
+The algorithm description is in `algorithms.md`.
