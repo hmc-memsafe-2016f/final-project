@@ -1,0 +1,6 @@
+[package]
+name = "final-project"
+version = "0.1.0"
+authors = ["Eric Mueller <eric.mueller1024@gmail.com>"]
+
+[dependencies]
