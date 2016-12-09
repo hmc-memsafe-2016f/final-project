@@ -15,7 +15,7 @@ A GraphMap does not panic as often, choosing instead to add nodes or edges that 
 In general, these panic conditions make sense. In C++ they would fall into the `undefined behavior' category, because it doesn't make sense to do operations on nodes that do not exist. In RUST, it's safer just to panic.
 
 3. petgraph has a lot of different implementations of graphs, and allows you to choose the one with the best speed guarantees for your purpose. It uses the RUST trait system to make this approach elegant. Each of the graphs implements a set of graph traits that allows them to work with the algorithms and iterator methods without relying on the implementation details. It's also relatively easy to switch between implementations, since graphs can be built from edge lists, and each type of graph can be converted into an edge list.
-Graphs also implement STL traits like Collection, allowing them to play nicely with other STL code.
+Graphs also implement STL traits like into_iter, allowing them to play nicely with other STL code.
 
 petgraph allows the creation of parallel edges, as well as the creation of edges from a vertex to itself. It does provide a method that creates edges that cannot be parallel, but there's no easy way to check if parallel or self-edges exist, and while there are some cases where this is useful (FSMs), there are also many cases where it is invalid.
 
