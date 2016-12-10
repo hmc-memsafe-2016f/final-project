@@ -41,12 +41,14 @@ mod graph {
 
     mod add_node {
         use super::super::{Graph, GraphType, NodeIter};
+        use std::panic;
+
+        static nodes: [usize;8] = [1, 2, 3, 4, 5, 6, 7, 8];
 
         #[test]
         fn one_node_directed() {
             let mut directed = Graph::new(GraphType::Directed);
-            let node = 1;
-            directed.add_node(&node);
+            directed.add_node(&nodes[0]);
             assert_expected_eq_actual!(directed.num_nodes(), 1);
             assert_expected_eq_actual!(directed.num_edges(), 0);
         }
@@ -54,12 +56,54 @@ mod graph {
         #[test]
         fn one_node_undirected() {
             let mut undirected = Graph::new(GraphType::Undirected);
-            let node = 1;
-            undirected.add_node(&node);
+            undirected.add_node(&nodes[0]);
             assert_expected_eq_actual!(undirected.num_nodes(), 1);
             assert_expected_eq_actual!(undirected.num_edges(), 0);
         }
 
+        #[test]
+        fn multiple_nodes_directed() {
+            let mut directed = Graph::new(GraphType::Directed);
+            for i in 0..8 {
+                directed.add_node(&nodes[i]);
+                assert_expected_eq_actual!(directed.num_nodes(), i);
+                assert_expected_eq_actual!(directed.num_edges(), 0);
+            }
+        }
+
+        #[test]
+        fn multiple_nodes_undirected() {
+            let mut undirected = Graph::new(GraphType::Undirected);
+            for i in 0..8 {
+                undirected.add_node(&nodes[i]);
+                assert_expected_eq_actual!(undirected.num_nodes(), i);
+                assert_expected_eq_actual!(undirected.num_edges(), 0);
+            }
+        }
+
+        #[test]
+        fn duplicate_node_panic_directed() {
+            let mut directed = Graph::new(GraphType::Directed);
+            directed.add_node(&nodes[0]);
+            assert_expected_eq_actual!(directed.num_nodes(), 1);
+            assert_expected_eq_actual!(directed.num_edges(), 0);
+
+            assert_expected_eq_actual!(panic::catch_unwind(|| {
+                directed.add_node(&nodes[0]);
+            }).is_err(), true);
+        }
+
+        #[test]
+        fn duplicate_node_panic_undirected() {
+            let mut undirected = Graph::new(GraphType::Undirected);
+            undirected.add_node(&nodes[0]);
+            assert_expected_eq_actual!(undirected.num_nodes(), 1);
+            assert_expected_eq_actual!(undirected.num_edges(), 0);
+
+            assert_expected_eq_actual!(panic::catch_unwind(|| {
+                undirected.add_node(&nodes[0]);
+            }).is_err(), true);
+        }
     }
 
     mod add_edge {
