@@ -12,11 +12,13 @@ pub struct Edge {
 }
 
 /// An EdgeIndex identifies a specific edge in the graph
-pub struct EdgeIndex {
+pub struct EdgeIndex<'a> {
+    edge: &'a Edge // TODO: figure out why do I need this lifetime parameter
 }
 
 /// A NodeIndex identifies a specific node (vertex) in the graph
 pub struct NodeIndex {
+    index: usize // the index in the graph's internal vec's corresponding to the vertex
 }
 
 /// Uses djikstra's algorithm to find the min path from a to b. Returns length of path
@@ -53,13 +55,39 @@ pub fn topo_sort<T>(g : &Graph<T>) -> Option<&[NodeIndex]>
 
 impl<T> Graph<T> {
     /// Creates a new `Graph`
-    pub fn new() -> Self {unimplemented!()}
+    pub fn new() -> Self
+    {
+        Graph{adjacency_list : vec!(), vertices: vec!()}
+    }
     /// Adds a node to the graph and returns its NodeIndex
-    pub fn add_node(&mut self, data: T) -> NodeIndex {unimplemented!()}
+    pub fn add_node(&mut self, data: T) -> NodeIndex
+    {
+        self.vertices.push(data);
+        self.adjacency_list.push(vec!());
+
+        // Sanity check
+        assert!(self.vertices.len() == self.adjacency_list.len()
+            , "vertices and adjacency list should be same size");
+        assert!(self.vertices.len() > 0);
+
+        NodeIndex{index: self.vertices.len() - 1}
+    }
     /// Adds a directed edge from a to b with weight w
-    pub fn add_edge(&mut self, a: NodeIndex, b: NodeIndex, w: usize) -> EdgeIndex {unimplemented!()}
+    pub fn add_edge(&mut self, a: NodeIndex, b: NodeIndex, w: usize) -> EdgeIndex
+    {
+        let adjL_index = a.index;
+        self.adjacency_list[adjL_index].push(Edge{weight: w, start: a, end: b});
+        EdgeIndex{edge: self.adjacency_list[adjL_index].last().unwrap()}
+    }
     /// Returns all edges going out of a given node
-    pub fn get_neighbors(&self, node: NodeIndex) -> Vec<Edge> {unimplemented!()}
+    pub fn get_neighbors(&self, node: NodeIndex) -> Vec<EdgeIndex>
+    {
+        let mut v = vec!();
+        for n in &self.adjacency_list[node.index] {
+            v.push(EdgeIndex{edge: &n});
+        }
+        v
+    }
 }
 
 
