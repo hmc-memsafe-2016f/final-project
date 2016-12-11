@@ -88,6 +88,15 @@ impl<T> Graph<T> {
         }
         v
     }
+    /// Returns a vector of all the NodeIndex's for all the nodes
+    pub fn get_all_nodes(&self) -> Vec<NodeIndex>
+    {
+        let mut v = vec!();
+        for x in 0..self.vertices.len() {
+            v.push(NodeIndex{index: x});
+        }
+        v
+    }
 }
 
 
