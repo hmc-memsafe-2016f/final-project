@@ -53,6 +53,11 @@ impl<T> Graph<T> {
         self.adjacency_list[adj_list_index].push(Edge{weight: w, end: b});
         EdgeIndex{edge: self.adjacency_list[adj_list_index].last().unwrap()}
     }
+    /// Returns a reference to what is stored in a particular node
+    pub fn get_vertex_data(&self, node: NodeIndex) -> &T
+    {
+        &self.vertices[node.index]
+    }
     /// Returns all edges going out of a given node
     pub fn get_neighbors(&self, node: NodeIndex) -> Vec<EdgeIndex>
     {
