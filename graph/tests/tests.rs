@@ -142,6 +142,29 @@ mod tests {
     }
 
     #[test]
+    fn topo_sort_complex() {
+        let mut x = Graph::<u8>::new();
+        let a = x.add_node(1);
+        let b = x.add_node(2);
+        let c = x.add_node(3);
+        let d = x.add_node(4);
+        let e = x.add_node(5);
+        x.add_edge(a, b, 1);
+        x.add_edge(b, c, 1);
+        x.add_edge(b, d, 1);
+        x.add_edge(c, d, 1);
+        x.add_edge(c, e, 1);
+        x.add_edge(e, d, 1);
+        let sorted = topo_sort(&x).unwrap();
+        assert_expected_eq_actual!(sorted.len(), 5);
+        assert_expected_eq_actual!(*x.get_vertex_data(sorted[0]), 1);
+        assert_expected_eq_actual!(*x.get_vertex_data(sorted[1]), 2);
+        assert_expected_eq_actual!(*x.get_vertex_data(sorted[2]), 3);
+        assert_expected_eq_actual!(*x.get_vertex_data(sorted[3]), 5);
+        assert_expected_eq_actual!(*x.get_vertex_data(sorted[4]), 4);
+    }
+
+    #[test]
     fn topo_sort_cycle() {
         let mut x = Graph::<u8>::new();
         let a = x.add_node(100);
