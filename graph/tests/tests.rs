@@ -1,7 +1,5 @@
 extern crate graph;
 
-pub use graph::{Graph,djikstra,topo_sort};
-
 // This macro is an assertion with nicely formatted failure output
 macro_rules! assert_expected_eq_actual {
     ($a:expr, $b:expr) => ({
@@ -20,6 +18,7 @@ mod tests {
     use graph::djikstra;
     use graph::topo_sort;
 
+    #[allow(unused_variables)]
     #[test]
     fn new_exists() {
         let x = Graph::<u8>::new();
@@ -100,6 +99,37 @@ mod tests {
     }
 
     #[test]
+    fn djikstra_cycle() {
+        let mut g = Graph::<u8>::new();
+        let a = g.add_node(100);
+        let b = g.add_node(50);
+        let c = g.add_node(1);
+        g.add_edge(a, b, 1);
+        g.add_edge(b, c, 1);
+        g.add_edge(c, a, 1);
+        let y = g.add_node(8);
+        let z = g.add_node(88);
+        g.add_edge(y,a,1);
+        g.add_edge(c,z,1);
+        assert_expected_eq_actual!(djikstra(&g, y, z), 4);
+    }
+
+    #[test]
+    fn djikstra_cycle_unreachable() {
+        let mut g = Graph::<u8>::new();
+        let a = g.add_node(100);
+        let b = g.add_node(50);
+        let c = g.add_node(1);
+        g.add_edge(a, b, 1);
+        g.add_edge(b, c, 1);
+        g.add_edge(c, a, 1);
+        let y = g.add_node(8);
+        let z = g.add_node(88);
+        g.add_edge(y,a,1);
+        assert_expected_eq_actual!(djikstra(&g, y, z), usize::max_value());
+    }
+
+    #[test]
     fn topo_sort_basic() {
         let mut x = Graph::<u8>::new();
         let a = x.add_node(100);
@@ -117,6 +147,24 @@ mod tests {
         let a = x.add_node(100);
         let b = x.add_node(50);
         let c = x.add_node(1);
+        x.add_edge(a, b, 1);
+        x.add_edge(b, c, 1);
+        x.add_edge(c, a, 1);
+        let sorted = topo_sort(&x);
+        match sorted {
+            Some(_) => assert!(false, "should not be able to topo_sort this graph"),
+            None => ()
+        }
+    }
+
+    #[test]
+    fn topo_sort_cycle2() {
+        let mut x = Graph::<u8>::new();
+        let a = x.add_node(100);
+        let b = x.add_node(50);
+        let c = x.add_node(1);
+        let d = x.add_node(2);
+        x.add_edge(d, a, 5);
         x.add_edge(a, b, 1);
         x.add_edge(b, c, 1);
         x.add_edge(c, a, 1);
