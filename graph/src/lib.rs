@@ -213,7 +213,3 @@ pub fn topo_sort<T>(g : &Graph<T>) -> Option<Vec<NodeIndex>>
     }
     Some(order_visited.iter().map(|x| NodeIndex{index: nodes[*x].index}).collect::<Vec<_>>())
 }
-
-fn main() {
-
-}
