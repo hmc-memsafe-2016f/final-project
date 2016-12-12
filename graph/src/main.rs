@@ -12,7 +12,6 @@ pub struct Graph<T> {
 /// This Edge structure represents an edge in a graph
 pub struct Edge {
     weight: usize,
-    start: NodeIndex,
     end: NodeIndex
 }
 
@@ -50,9 +49,9 @@ impl<T> Graph<T> {
     /// Adds a directed edge from a to b with weight w
     pub fn add_edge(&mut self, a: NodeIndex, b: NodeIndex, w: usize) -> EdgeIndex
     {
-        let adjL_index = a.index;
-        self.adjacency_list[adjL_index].push(Edge{weight: w, start: a, end: b});
-        EdgeIndex{edge: self.adjacency_list[adjL_index].last().unwrap()}
+        let adj_list_index = a.index;
+        self.adjacency_list[adj_list_index].push(Edge{weight: w, end: b});
+        EdgeIndex{edge: self.adjacency_list[adj_list_index].last().unwrap()}
     }
     /// Returns all edges going out of a given node
     pub fn get_neighbors(&self, node: NodeIndex) -> Vec<EdgeIndex>
@@ -113,7 +112,7 @@ pub fn djikstra<T>(g : &Graph<T>, a: NodeIndex, b: NodeIndex) -> usize
     Repeat until we reach vertex b at which point we return b's distance.
     */
     let mut heap = BinaryHeap::new();
-    let mut nodes = g.get_all_nodes();
+    let nodes = g.get_all_nodes();
 
     // add all nodes to a min heap
     for n in nodes {
@@ -164,11 +163,11 @@ pub fn topo_sort<T>(g : &Graph<T>) -> Option<Vec<NodeIndex>>
     in degrees of each node it has an edge to, and repeat until we havee added
     all vertices to the slice we are returning.
     */
-    let mut nodes = g.get_all_nodes();
+    let nodes = g.get_all_nodes();
 
     // Find the initial in-degrees
     let mut in_degrees = Vec::with_capacity(nodes.len());
-    for i in 0..nodes.len() {
+    for _ in 0..nodes.len() {
         in_degrees.push(0);
     }
     for node in nodes {
