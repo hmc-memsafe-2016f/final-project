@@ -154,7 +154,7 @@ pub fn djikstra<T>(g : &Graph<T>, a: NodeIndex, b: NodeIndex) -> usize
 /// Does a topological sort of the graph.
 /// Will return the order that the nodes can be visited unless it is not possible
 /// to topologically sort the graph in which case it will return None
-pub fn topo_sort<T>(g : &Graph<T>) -> Option<&[NodeIndex]>
+pub fn topo_sort<T>(g : &Graph<T>) -> Option<Vec<NodeIndex>>
 {
     /*
     To implement this I will first go through the graph and count the in degree
@@ -164,7 +164,43 @@ pub fn topo_sort<T>(g : &Graph<T>) -> Option<&[NodeIndex]>
     in degrees of each node it has an edge to, and repeat until we havee added
     all vertices to the slice we are returning.
     */
-    unimplemented!()
+    let mut nodes = g.get_all_nodes();
+
+    // Find the initial in-degrees
+    let mut in_degrees = Vec::with_capacity(nodes.len());
+    for i in 0..nodes.len() {
+        in_degrees.push(0);
+    }
+    for node in nodes {
+        for edge in g.get_neighbors(node) {
+            in_degrees[edge.edge.end.index] += 1;
+        }
+    }
+
+    let mut order_visited = vec!();
+    // Now loop through and find vertice with in-degree zero
+    while order_visited.len() != in_degrees.len() {
+        let mut found_in_deg_zero = false;
+        for i in 0..in_degrees.len() {
+            // If i is a vertex with in degree 0 and we haven't visited it
+            // add it to the order_visited vector and decrement the in degrees of
+            // its neighbors
+            if in_degrees[i] == 0 && !order_visited.contains(&i) {
+                found_in_deg_zero = true;
+                order_visited.push(i);
+                for e in g.get_neighbors(NodeIndex{index: i}) {
+                    in_degrees[e.edge.end.index] -= 1;
+                }
+            }
+        }
+
+        // If we've looped through the entire array and not found any in degree
+        // of zero then we cannot topologically sort the graph
+        if found_in_deg_zero == false {
+            return None
+        }
+    }
+    Some(order_visited.iter().map(|x| NodeIndex{index: *x}).collect::<Vec<_>>())
 }
 
 fn main() {
