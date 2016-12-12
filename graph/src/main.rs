@@ -170,8 +170,20 @@ pub fn topo_sort<T>(g : &Graph<T>) -> Option<Vec<NodeIndex>>
     for _ in 0..nodes.len() {
         in_degrees.push(0);
     }
-    for node in nodes {
-        for edge in g.get_neighbors(node) {
+    for node in &nodes {
+        for edge in g.get_neighbors(*node) {
+
+            // we make slight assumption about internal working of Graph. Feels
+            // cleanest to make assumption but here's an assert in case this changes
+            // in future so that we know what went wrong.
+            assert!(edge.edge.end.index < in_degrees.len()
+                , "Current implementation assumes that a graph's NodeIndex's \
+                   are  in [0,n) where n is number of nodes in the graph. If \
+                   this is not true then topo_sort must be changed so that there \
+                   is a function that maps NodeIndex indices to indices between \
+                   0 and n so that we can have a correspondance between \
+                   the topo_sort's in_degree vector and EdgeIndex index.");
+
             in_degrees[edge.edge.end.index] += 1;
         }
     }
@@ -187,7 +199,7 @@ pub fn topo_sort<T>(g : &Graph<T>) -> Option<Vec<NodeIndex>>
             if in_degrees[i] == 0 && !order_visited.contains(&i) {
                 found_in_deg_zero = true;
                 order_visited.push(i);
-                for e in g.get_neighbors(NodeIndex{index: i}) {
+                for e in g.get_neighbors(NodeIndex{index: nodes[i].index}) {
                     in_degrees[e.edge.end.index] -= 1;
                 }
             }
@@ -199,7 +211,7 @@ pub fn topo_sort<T>(g : &Graph<T>) -> Option<Vec<NodeIndex>>
             return None
         }
     }
-    Some(order_visited.iter().map(|x| NodeIndex{index: *x}).collect::<Vec<_>>())
+    Some(order_visited.iter().map(|x| NodeIndex{index: nodes[*x].index}).collect::<Vec<_>>())
 }
 
 fn main() {
