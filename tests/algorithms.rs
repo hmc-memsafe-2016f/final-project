@@ -23,7 +23,96 @@ mod algorithms {
         use super::NODES;
 
         #[test]
-        fn isomorphic() {
+        fn directed_empty() {
+            let first = Graph::<()>::new(GraphType::Directed);
+            let second = Graph::new(GraphType::Directed);
+
+            assert_expected_eq_actual!(first.vf2(&second), true);
+
+        }
+
+        #[test]
+        fn directed_diff_num_edges() {
+            let mut first = Graph::new(GraphType::Directed);
+            let mut second = Graph::new(GraphType::Directed);
+
+            let mut fiters = vec![];
+            fiters.push(first.add_node(&NODES[0]));
+            fiters.push(first.add_node(&NODES[1]));
+            first.add_edge(&fiters[0], &fiters[1], 10);
+
+            let mut siters = vec![];
+            siters.push(second.add_node(&NODES[4]));
+            siters.push(second.add_node(&NODES[5]));
+
+            assert_expected_eq_actual!(first.vf2(&second), false);
+        }
+
+        #[test]
+        fn directed_diff_num_nodes() {
+            let mut first = Graph::new(GraphType::Directed);
+            let mut second = Graph::new(GraphType::Directed);
+
+            let mut fiters = vec![];
+            fiters.push(first.add_node(&NODES[0]));
+            fiters.push(first.add_node(&NODES[1]));
+
+            let mut siters = vec![];
+            siters.push(second.add_node(&NODES[4]));
+
+            assert_expected_eq_actual!(first.vf2(&second), false);
+        }
+
+        #[test]
+        fn undirected_empty() {
+            let first = Graph::<()>::new(GraphType::Undirected);
+            let second = Graph::new(GraphType::Undirected);
+
+            assert_expected_eq_actual!(first.vf2(&second), true);
+        }
+
+        #[test]
+        fn undirected_diff_num_edges() {
+            let mut first = Graph::new(GraphType::Undirected);
+            let mut second = Graph::new(GraphType::Undirected);
+
+            let mut fiters = vec![];
+            fiters.push(first.add_node(&NODES[0]));
+            fiters.push(first.add_node(&NODES[1]));
+            first.add_edge(&fiters[0], &fiters[1], 10);
+
+            let mut siters = vec![];
+            siters.push(second.add_node(&NODES[4]));
+            siters.push(second.add_node(&NODES[5]));
+
+            assert_expected_eq_actual!(first.vf2(&second), false);
+        }
+
+        #[test]
+        fn undirected_diff_num_nodes() {
+            let mut first = Graph::new(GraphType::Undirected);
+            let mut second = Graph::new(GraphType::Undirected);
+
+            let mut fiters = vec![];
+            fiters.push(first.add_node(&NODES[0]));
+            fiters.push(first.add_node(&NODES[1]));
+
+            let mut siters = vec![];
+            siters.push(second.add_node(&NODES[4]));
+
+            assert_expected_eq_actual!(first.vf2(&second), false);
+        }
+
+        #[test]
+        fn diff_directedness() {
+            let first = Graph::<()>::new(GraphType::Undirected);
+            let second = Graph::<()>::new(GraphType::Directed);
+
+            assert_expected_eq_actual!(first.vf2(&second), false);
+        }
+
+        #[test]
+        fn isomorphic_directed() {
             let mut first = Graph::new(GraphType::Directed);
             let mut fiters = vec![];
             for i in 0..6 {
@@ -66,7 +155,50 @@ mod algorithms {
         }
 
         #[test]
-        fn not_isomorphic() {
+        fn isomorphic_undirected() {
+            let mut first = Graph::new(GraphType::Undirected);
+            let mut fiters = vec![];
+            for i in 0..6 {
+                fiters.push(first.add_node(&NODES[i]))
+            }
+
+            for i in 0..3 {
+                first.add_edge(&fiters[(2*i)], &fiters[(2*i) + 1], i);
+            }
+
+            // This graph looks like
+            // 1->2
+            // 3->4
+            // 5->6
+
+            let mut second = Graph::new(GraphType::Undirected);
+            let mut siters = vec![];
+
+            for i in 0..6 {
+                siters.push(second.add_node(&NODES[6-i-1]));
+            }
+
+            for i in 0..3 {
+                second.add_edge(&siters[(2*i)], &siters[(2*i)+1], i);
+            }
+
+            // This graph looks like
+            // 6->5
+            // 4->3
+            // 2->1
+
+            // One of the isomorphism would be
+            // 1->6
+            // 2->5
+            // 3->4
+            // 4->3
+            // 5->2
+            // 1->6
+            assert_expected_eq_actual!(first.vf2(&second), true);
+        }
+
+        #[test]
+        fn not_isomorphic_directed() {
             let mut first = Graph::new(GraphType::Directed);
             let mut fiters = vec![];
             for i in 0..6 {
@@ -88,13 +220,51 @@ mod algorithms {
                 siters.push(second.add_node(&NODES[6-i-1]));
             }
 
-            for i in 0..2 {
-                second.add_edge(&siters[(2*i)], &siters[(2*i)+1], i);
+            for i in 0..3 {
+                second.add_edge(&siters[0], &siters[(2*i)+1], i);
             }
             // This graph looks like
             // 6->5
-            // 4->3
-            // 2  1
+            // 6->3
+            // 6->1
+            // 4
+            // 2
+
+            assert_expected_eq_actual!(first.vf2(&second), false);
+        }
+
+        #[test]
+        fn not_isomorphic_undirected() {
+            let mut first = Graph::new(GraphType::Undirected);
+            let mut fiters = vec![];
+            for i in 0..6 {
+                fiters.push(first.add_node(&NODES[i]))
+            }
+
+            for i in 0..3 {
+                first.add_edge(&fiters[(2*i)], &fiters[(2*i) + 1], i);
+            }
+            // This graph looks like
+            // 1->2
+            // 3->4
+            // 5->6
+
+            let mut second = Graph::new(GraphType::Undirected);
+            let mut siters = vec![];
+
+            for i in 0..6 {
+                siters.push(second.add_node(&NODES[6-i-1]));
+            }
+
+            for i in 0..3 {
+                second.add_edge(&siters[0], &siters[(2*i)+1], i);
+            }
+            // This graph looks like
+            // 6->5
+            // 6->3
+            // 6->1
+            // 4
+            // 2
 
             assert_expected_eq_actual!(first.vf2(&second), false);
         }

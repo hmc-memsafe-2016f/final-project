@@ -229,7 +229,7 @@ impl<'a, Node: Eq> Graph<'a, Node> {
                                                       .filter(|n| isomorphism[n.0].is_none())
                                                       .collect();
           let mut index = 0;
-          'neighbors: loop {
+          'neighbors: while index < my_neighbors.len() {
               while isomorphism[my_neighbors[index].0].is_some() {
                   index += 1;
                   if index >= my_neighbors.len() {
