@@ -13,13 +13,14 @@ use std::marker::PhantomData;
 use std::ops::Deref;
 use std::hash::Hash;
 use std::cmp::Eq;
+use std::sync::RwLock;
 
 /// A data structure which represents a mathematical graph.
 /// It is implemented as an adjacency list (a vector of Linked Lists) together
 /// with a Vector of vertices.
 pub struct Graph<V, E> {
-    adj_list: Vec<LinkedList<Edge<E>>>,
-    vertices: Vec<Vertex<V>>,
+    adj_list: RwLock<Vec<LinkedList<Edge<E>>>>,
+    vertices: RwLock<Vec<Vertex<V>>>,
 }
 
 /// A vertex, can be inserted into a Graph and holds data of arbitrary type.
@@ -27,9 +28,9 @@ pub struct Vertex<V> {
     contents: V,
 }
 
-/// A private struct in the Graph's adjacency list which keeps indices to
+/// A public struct in the Graph's adjacency list which keeps indices to
 /// both endpoints and the data associated with the edge.
-struct Edge<E> {
+pub struct Edge<E> {
     parent: usize,
     child: usize,
     weight: E,
@@ -41,11 +42,13 @@ pub struct VRef<'a, V: 'a, E: 'a> {
     index: usize,
     graph: &'a Graph<V, E>,
 }
+
 impl<'a, V, E> Clone for VRef<'a, V, E> {
     fn clone(&self) -> Self {
         VRef{ index: self.index, graph: self.graph }
     }
 }
+
 impl<'a, V, E> Copy for VRef<'a, V, E> {
 }
 
@@ -60,7 +63,7 @@ pub struct VIter<'a, V: 'a, E: 'a> {
     r: VRef<'a, V, E>,
 }
 
-impl<'a, V, E> Iterator for VIter<'a, V, E> {
+impl<'a, V, E: Clone + Copy> Iterator for VIter<'a, V, E> {
     type Item = VRef<'a, V, E>;
     fn next(&mut self) -> Option<Self::Item> {
         if self.r.index < self.r.graph.num_vertices() {
@@ -74,19 +77,31 @@ impl<'a, V, E> Iterator for VIter<'a, V, E> {
     }
 }
 
-pub struct eIter<'a, E: 'a> {
-    iter: linked_list::Iter<'a, Edge<E>>
+pub struct ERef<'a, E: 'a> {
+    r: &'a Edge<E>
 }
 
-impl<'a, E> Deref for eIter<'a, E> {
-    type Target = E;
-    fn deref(&self) -> &E {
-        unimplemented!()
+impl<'a, E> Deref for ERef<'a, E> {
+    type Target = Edge<E>;
+    fn deref(&self) -> &Edge<E> {
+        &(self.r)
     }
 }
 
+pub struct EIter<'a, E: 'a> {
+    iter: linked_list::Iter<'a, Edge<E>>
+}
+
+impl<'a, E> Iterator for EIter<'a, E> {
+    type Item = ERef<'a, E>;
+    fn next(&mut self) -> Option<Self::Item> {
+        self.iter.next().map(|edge_ref| ERef{ r: edge_ref })
+    }
+}
+
+
 // Some functions require types V and E to have default values
-impl<'a, V: Hash + Eq + Copy + Clone, E: Default> Graph<V, E> {
+impl<'a, V: Hash + Eq + Copy + Clone, E: Default + Copy + Clone> Graph<V, E> {
     /// Returns an iterator that ranges over all vertices in arbitrary order.
     pub fn vertices(&'a self) -> VIter<'a, V, E> {
         VIter{ r: VRef{ index: 0, graph: &self } }
@@ -106,61 +121,60 @@ impl<'a, V: Hash + Eq + Copy + Clone, E: Default> Graph<V, E> {
         }
 
         for &(u, v) in edges {
-                if !ref_map.contains_key(&u) {
-                    let vref : VRef<'a, V, E> = self.add_vertex(u);
-                    vrefs.push(vref);
-                    ref_map.insert(u, vref);
-                }
-                if !ref_map.contains_key(&v) {
-                    let vref = self.add_vertex(v);
-                    vrefs.push(vref);
-                    ref_map.insert(v, vref);
-                }
-            self.add_edge(ref_map.get(&u).unwrap(), ref_map.get(&v).unwrap(), E::default());
+            if !ref_map.contains_key(&u) {
+                let vref : VRef<'a, V, E> = self.add_vertex(u);
+                vrefs.push(vref);
+                ref_map.insert(u, vref);
+            }
+            if !ref_map.contains_key(&v) {
+                let vref = self.add_vertex(v);
+                vrefs.push(vref);
+                ref_map.insert(v, vref);
+            }
+            self.add_directed_edge(ref_map.get(&u).unwrap(), ref_map.get(&v).unwrap(), E::default());
         };
         vrefs
     }
-    /// Construct a graph without data, with default values for V and E
-    #[allow(unused_variables)]
-    pub fn new_from_edges(edges: &Vec<(V, V)>) -> Self {
-        //let mut v = Vec::new();
-        //let g: Graph<V, E> = Graph::new_from_edges_populate_iters(edges, &mut v);
-        //return g;
-        unimplemented!()
-    }
 }
 
-impl<V, E> Graph<V, E> {
+impl<V, E: Clone + Copy> Graph<V, E> {
     /// Create a new, empty graph
     pub fn new() -> Self {
-        Graph{ adj_list: Vec::new(), vertices: Vec::new() }
+        Graph{ adj_list: RwLock::new(Vec::new()) , vertices: RwLock::new(Vec::new()) }
     }
 
     /// Add a vertex to a graph, returning an VRef to the inserted vertex.
     /// The lifetime of the VRef is limited to the lifetime of the inserted
     /// vertex.
     #[allow(unused_variables)]
-    //pub fn add_vertex(&'a mut self, v: Vertex<V>) -> 'a VRef<V, E> {
-    //TODO Alex, is it even possible to put a lifetime to a nonreference opject
-    //as we want to do here? We want to ensure that VRef will not outlive the
-    //graph for saftey reasons.
-    //One of our ideas for making this work would be to have an VRef contain a
-    //reference to an index and insist the the VRef not outlive that reference.
-    //We could then return an VRef out of references that do not outlive
-    //their graph.
     pub fn add_vertex(&self, v: V) -> VRef<V, E> {
-        unimplemented!()
-        //VRef<V, E> { index: }
+        self.vertices.write().unwrap().push(Vertex{ contents: v } );
+        self.adj_list.write().unwrap().push(LinkedList::new());
+        VRef { index: self.vertices.read().unwrap().len(), graph: &self }
     }
 
-    /// Add an edge to a graph if there is not currently an edge between those
-    /// vertices.  Returns true if successful, and false otherwise.
-    #[allow(unused_variables)]
-    pub fn add_edge(&self, v1: &VRef<V, E>, v2: &VRef<V, E>, value: E) ->
-        Option<eIter<E>> {
-        //TODO Ask Alex if this return type is weird (gets back to the "should
-        //we have edge VRefs?" question).
-        unimplemented!()
+    /// Add a directed edge to the graph from v1 to v2 with weight `value`.
+    /// Returns an ERef to the added edge.
+    pub fn add_directed_edge<'a>(&'a self, v1: &VRef<V, E>, v2: &VRef<V, E>, value: E)
+            -> ERef<'a, E> {
+        {
+        let mut adj_list = self.adj_list.write().unwrap();
+        adj_list[v1.index].push_front(Edge{ parent: v1.index, child: v2.index, weight: value });
+        }
+        let adj_list = self.adj_list.read().unwrap();
+        unsafe {
+            let edge_ref = adj_list[v1.index].front().unwrap() as *const Edge<E>;
+            ERef{ r: edge_ref.as_ref().unwrap() }
+        }
+    }
+
+    /// Adds an undirected edge to the graph between v1 and v2.
+    /// Returns a tuple of ERefs to the added edges.
+    pub fn add_undirected_edge(&self, v1: &VRef<V, E>, v2: &VRef<V, E>, value: E)
+            -> (ERef<E>, ERef<E>) {
+        let ref1 = Graph::add_directed_edge(&self, v1, v2, value);
+        let ref2 = Graph::add_directed_edge(&self, v2, v1, value);
+        (ref1, ref2)
     }
 
     /// Returns the old value associated with vertex v and replaces it with the
