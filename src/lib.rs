@@ -6,12 +6,13 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 use std::rc::Weak;
+use std::iter::Map;
 
 type NodeReference<N, E> = Rc<RefCell<Node<N, E>>>;
 
 pub type WeakNodeReference<N, E> = Weak<RefCell<Node<N, E>>>;
 
-pub struct Graph<N, E: Ord>
+pub struct Graph<N, E: Ord+Copy>
 {
 	vertices:	Vec<NodeReference<N, E>>
 }
@@ -28,7 +29,7 @@ struct Node<N, E>
 	edges:	Vec<Edge<N, E>>
 }
 
-impl<N, E: Ord> Graph<N, E>
+impl<N, E: Ord+Copy> Graph<N, E>
 {
 ///Creates a new `Graph`
 	pub fn new() -> Self
@@ -39,9 +40,9 @@ impl<N, E: Ord> Graph<N, E>
 	}
 
 	///Gets an iterator over the nodes
-	pub fn nodes(&self) -> impl Iterator
+	pub fn nodes(&self) -> Vec<WeakNodeReference<N, E>>
 	{
-		self.vertices.iter().map(|x| Rc::downgrade(x))
+		self.vertices.iter().map(|x| Rc::downgrade(x)).collect()
 	}
 
 	//mutable iterator over the nodes??
@@ -49,11 +50,11 @@ impl<N, E: Ord> Graph<N, E>
 	///Gets an iterator of the neighbors of a node
 	///`Ok` if the node exists
 	///`Err` if it doesn't exist anymore
-	pub fn neighbors(&self, node: &WeakNodeReference<N, E>) -> Result<impl Iterator<Item=WeakNodeReference<N, E>>, ()>
+	pub fn neighbors(&self, node: &WeakNodeReference<N, E>) -> Result<Vec<WeakNodeReference<N, E>>,()>
 	{
 		match node.upgrade()
 		{
-			Some(strong_node)	=> Ok((*strong_node).borrow().edges.iter().map(|x| Rc::downgrade(&x.node))),
+			Some(strong_node)	=> Ok((*strong_node).borrow().edges.iter().map(|x| Rc::downgrade(&x.node)).collect()),
 			None 				=> Err(())
 		}
 	}
@@ -69,8 +70,8 @@ impl<N, E: Ord> Graph<N, E>
 			to.upgrade().and_then(|strong_to|
 			{
 				//Create an edge
-				let edge = Edge::<N, E>{node: strong_to, weight: weight};
-				let from_ref = strong_from.borrow_mut();
+				let edge = Edge::<N, E>{node: strong_to.clone(), weight: weight};
+				let mut from_ref = strong_from.borrow_mut();
 
 				//filter out all eddges already existing to to
 				from_ref.edges.retain(|x| Rc::ptr_eq(&x.node, &strong_to));
@@ -98,14 +99,14 @@ impl<N, E: Ord> Graph<N, E>
 		match from.upgrade().and_then(|strong_from|
 			to.upgrade().and_then(|strong_to|
 			{
-				let to_edge = Edge::<N, E>{node: strong_to, weight: weight};
-				let from_edge = Edge::<N, E>{node: strong_from, weight: weight};
-				let from_ref = strong_from.borrow_mut();
-				let to_ref = strong_to.borrow_mut();
+				let to_edge = Edge::<N, E>{node: strong_to.clone(), weight: weight};
+				let from_edge = Edge::<N, E>{node: strong_from.clone(), weight: weight};
+				let mut from_ref = strong_from.borrow_mut();
+				let mut to_ref = strong_to.borrow_mut();
 
 				//Filter out all edges already existing to to
 				from_ref.edges.retain(|x| !Rc::ptr_eq(&x.node,&strong_to));
-				to_ref.edges.retain(|x| !Rc::ptr_eq(&x.node,strong_from));
+				to_ref.edges.retain(|x| !Rc::ptr_eq(&x.node,&strong_from));
 
 				from_ref.edges.push(to_edge);
 				to_ref.edges.push(from_edge);
@@ -128,7 +129,7 @@ impl<N, E: Ord> Graph<N, E>
 		let node_ref = Rc::new(RefCell::new(node));
 
 		//store that reference in the graph
-		self.vertices.push(node_ref);
+		self.vertices.push(node_ref.clone());
 
 		//give the user back a weak to it
 		Rc::downgrade(&node_ref)
@@ -162,26 +163,31 @@ impl<N, E: Ord> Graph<N, E>
 		match from.upgrade().and_then(|strong_from|
 			to.upgrade().and_then(|strong_to|
 			{
-				let to_ref = strong_to.borrow_mut();
-				let from_ref = strong_to.borrow_mut();
+				let mut to_ref = strong_to.borrow_mut();
+				let mut from_ref = strong_from.borrow_mut();
 
 				match to_ref.edges.into_iter()
-					.find(|x| Rc::ptr_eq(&x.node, strong_from))
-					.and_then(|to_edge| from_ref.edges.into_iter()
-						.find(|x| Rc::ptr_eq(&x.node, &strong_to) && x.weight == edge1.weight)
-						.and_then(|from_edge|
-							to_ref.edges.retain(|x| !Rc::ptr_eq(&x.node, &strong_from));
-							from_ref.edges.retain(|x| !Rc::ptr_eq(&x.node, &strong_to));
-							Some(())
-						)
+					.find(|x| Rc::ptr_eq(&x.node,&strong_from))
+					.and_then(|to_edge| 
+                        {
+                            from_ref.edges.into_iter()
+                            .find(|x| Rc::ptr_eq(&x.node, &strong_to) && x.weight == to_edge.weight)
+                            .and_then(|from_edge|
+                                {
+                                    to_ref.edges.retain(|x| !Rc::ptr_eq(&x.node, &strong_from));
+                                    from_ref.edges.retain(|x| !Rc::ptr_eq(&x.node, &strong_to));
+                                    Some(())
+                                }
+                            )
+                        }
 					)
 				{
-					Some(_)	=> Ok(()),
-					None	=> Err(())
+					Some(_)	=> {
+                                strong_from.borrow_mut().edges.retain(|x| !Rc::ptr_eq(&x.node, &strong_to));
+                                Some(())
+                                },
+					None	=> None
 				}
-
-				strong_from.borrow_mut().edges.retain(|x| !Rc::ptr_eq(&x.node, &strong_to));
-				Some(())
 			}
 			))
 		{
@@ -198,16 +204,19 @@ impl<N, E: Ord> Graph<N, E>
 		//get iterator over the neighbors
 		match self.neighbors(&node)
 		{
-			Ok(iter)	=> {
+			Ok(collection)	=> {
 							//delete all edges from each neighbor
-							iter.map(|x| self.delete_edge(&x, &node));
+							collection.into_iter().map(|x| self.delete_edge(&x, &node));
 							//delete the node
 							match node.upgrade()
 								.and_then(|strong_node|
-									self.nodes.retain(|x| !Rc::ptr_eq(&x, &strong_node));
-									Some(()))
+                                    {
+                                        self.vertices.retain(|x| !Rc::ptr_eq(&x, &strong_node));
+                                        Some(())
+                                    }
+                                )
 							{
-								Some(_)	=>	Ok(())
+								Some(_)	=>	Ok(()),
 								None	=> Err(())
 							}
 							},
@@ -232,7 +241,7 @@ impl<N, E: Ord> Graph<N, E>
 	{
 		match node.upgrade()
 		{
-			Some(strong_node) => Ok(strong_node.borrow()),
+			Some(strong_node) => Ok(&(*strong_node).borrow().data),
 			None => Err(())
 		}
 	}
@@ -242,7 +251,7 @@ impl<N, E: Ord> Graph<N, E>
 	{
 		match node.upgrade()
 		{
-			Some(strong_node) => Ok(strong_node.borrow_mut()),
+			Some(strong_node) => Ok(&mut strong_node.borrow_mut().data),
 			None => Err(())
 		}
 	}
@@ -258,7 +267,7 @@ impl<N, E: Ord> Graph<N, E>
 				{
 					Some(edge)	=> Some(&edge.weight),
 					None 		=> None
-				},
+				}
 			}
 			))
 		{
@@ -278,7 +287,7 @@ impl<N, E: Ord> Graph<N, E>
 				{
 					Some(edge)	=> Some(&mut edge.weight),
 					None 		=> None
-				},
+				}
 			}
 			))
 		{
