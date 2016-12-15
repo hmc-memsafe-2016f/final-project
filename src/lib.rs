@@ -139,18 +139,16 @@ impl<N, E: Ord> Graph<N, E>
 	///`Err` if either node doesn't exist anymore
 	pub fn delete_edge(&mut self, from: &WeakNodeReference<N, E>, to: &WeakNodeReference<N, E>) -> Result<(), ()>
 	{
-
-		match to.upgrade()
+		match from.upgrade().and_then(|strong_from|
+			to.upgrade().and_then(|strong_to|
+			{
+				strong_from.borrow_mut().edges.retain(|x| !Rc::ptr_eq(&x.node, &strong_to));
+				Some(())
+			}
+			))
 		{
-			Ok(strong_to) 	=> match from.upgrade()
-							{
-								Ok(strong_from)	=> {
-													strong_from.borrow_mut().edges.retain(|x| *x.node != *strong_to);
-													Ok()
-													},
-								None			=> Err(())
-							},
-			Err(())			=> Err(())
+			Some(_) => Ok(()),
+			None	=> Err(())
 		}
 	}
 
@@ -161,32 +159,34 @@ impl<N, E: Ord> Graph<N, E>
 	///`Err` if their weights were different, or if either node doesn't exist anymore
 	pub fn delete_edge_undirected(&mut self, from: &WeakNodeReference<N, E>, to: &WeakNodeReference<N, E>) -> Result<(), ()>
 	{
-		match to.upgrade()
-		{
-			Ok(strong_to) 	=> match from.upgrade()
-							{
-								Ok(strong_from)	=> {
-													let to_ref = strong_to.borrow_mut();
-													let from_ref = strong_to.borrow_mut();
+		match from.upgrade().and_then(|strong_from|
+			to.upgrade().and_then(|strong_to|
+			{
+				let to_ref = strong_to.borrow_mut();
+				let from_ref = strong_to.borrow_mut();
 
-													//find the edge from to to from
-													match to_ref.edges.into_iter().find(|x| *x.node == *strong_from)
-													{
-														Some(edge1) =>	match from_ref.edges.into_iter().find(|x| *x.node == *strong_to && x.weight == edge1.weight)
-																		{
-																			Some(edge2)	=> {
-																							to_ref.edges.retain(|x| *x.node != *strong_from);
-																							from_ref.edges.retain(|x| *x.node != *strong_to);
-																							Ok()
-																							},
-																			None		=> Err(())
-																		},
-														None		=>	Err(())
-													}
-													},
-								None			=> Err(())
-							},
-			Err(())			=> Err(())
+				match to_ref.edges.into_iter()
+					.find(|x| Rc::ptr_eq(&x.node, strong_from))
+					.and_then(|to_edge| from_ref.edges.into_iter()
+						.find(|x| Rc::ptr_eq(&x.node, &strong_to) && x.weight == edge1.weight)
+						.and_then(|from_edge|
+							to_ref.edges.retain(|x| !Rc::ptr_eq(&x.node, &strong_from));
+							from_ref.edges.retain(|x| !Rc::ptr_eq(&x.node, &strong_to));
+							Some(())
+						)
+					)
+				{
+					Some(_)	=> Ok(()),
+					None	=> Err(())
+				}
+
+				strong_from.borrow_mut().edges.retain(|x| !Rc::ptr_eq(&x.node, &strong_to));
+				Some(())
+			}
+			))
+		{
+			Some(_) => Ok(()),
+			None	=> Err(())
 		}
 	}
 
@@ -203,12 +203,12 @@ impl<N, E: Ord> Graph<N, E>
 							iter.map(|x| self.delete_edge(&x, &node));
 							//delete the node
 							match node.upgrade()
+								.and_then(|strong_node|
+									self.nodes.retain(|x| !Rc::ptr_eq(&x, &strong_node));
+									Some(()))
 							{
-								Some(strong_node)	=> {
-														self.nodes.retain(|x| !Rc::ptr_eq(&x,&node));
-														Ok()
-														},
-								None				=> Err(())
+								Some(_)	=>	Ok(())
+								None	=> Err(())
 							}
 							},
 			Err(())		=> Err(())
@@ -250,36 +250,40 @@ impl<N, E: Ord> Graph<N, E>
 	//Immutably borrows the weight of an edge
 	pub fn get_edge(&self, from: &WeakNodeReference<N, E>, to: &WeakNodeReference<N, E>) -> Result<&E, ()>
 	{
-		match from.upgrade()
+		match from.upgrade().and_then(|strong_from|
+			to.upgrade().and_then(|strong_to|
+			{
+				//the first edge in from's edge list that points to to
+				match strong_from.borrow_mut().edges.into_iter().find(|x| Rc::ptr_eq(&x.node, &strong_to))
+				{
+					Some(edge)	=> Some(&edge.weight),
+					None 		=> None
+				},
+			}
+			))
 		{
-			Some(strong_from)	=> match to.upgrade()
-									{
-										Some(strong_to)	=> match strong_from.borrow_mut().edges.into_iter().find(|x| Rc::ptr_eq(&x.node,&strong_to))
-															{
-																Some(edge)	=> Ok(&edge.weight),
-																None 		=> Err(())
-															},
-										None 			=> Err(())
-									},
-			None 				=> Err(())
+			Some(edge_weight) => Ok(edge_weight),
+			None	=> Err(())
 		}
 	}
 
 	///Mutably borrows the weight of an edge
 	pub fn get_edge_mut(&self, from: &WeakNodeReference<N, E>, to: &WeakNodeReference<N, E>) -> Result<&mut E, ()>
 	{
-		match from.upgrade()
+		match from.upgrade().and_then(|strong_from|
+			to.upgrade().and_then(|strong_to|
+			{
+				//the first edge in from's edge list that points to to
+				match strong_from.borrow_mut().edges.into_iter().find(|x| Rc::ptr_eq(&x.node, &strong_to))
+				{
+					Some(edge)	=> Some(&mut edge.weight),
+					None 		=> None
+				},
+			}
+			))
 		{
-			Some(strong_from)	=> match to.upgrade()
-									{
-										Some(strong_to)	=> match strong_from.borrow_mut().edges.into_iter().find(|x| Rc::ptr_eq(&x.node,&strong_to))
-															{
-																Some(edge)	=> Ok(&mut edge.weight),
-																None 		=> Err(())
-															},
-										None 			=> Err(())
-									},
-			None 				=> Err(())
+			Some(edge_weight) => Ok(edge_weight),
+			None	=> Err(())
 		}
 	}
 
