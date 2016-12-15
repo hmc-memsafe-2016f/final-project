@@ -57,36 +57,24 @@ impl<N, E> Graph<N, E>
 	///`Err` if the edge already existed or if the node doesn't exist anymore
 	pub fn create_edge(&mut self, from: &WeakNodeReference, to: &WeakNodeReference, weight: E) -> Result<(), ()>
 	{
-
-		/*
-		from.upgrade().map(|strong_from| 
-			to.upgrade().map(|strong_to| 
-				let edge{node: strong_to, weight: weight};
+		match from.upgrade().and_then(|strong_from|
+			to.upgrade().and_then(|strong_to|
+			{
+				//Create an edge
+				let edge = Edge::<E>{node: strong_to, weight: weight};
 				let from_ref = strong_from.borrow_mut();
+
+				//filter out all eddges already existing to to
+				*from_ref.edges.retain(|x| *x.node != *strong_to);
+
+				//add in the new edge
 				*from_ref.edges.push_front(edge);
-				)).ok_or(())
-		*/
-
-		match from.upgrade()
+				Some()
+			}
+			))
 		{
-			Some(strong_from)	=> match to.upgrade()
-								   {
-								   		Some(strong_to) => {
-								   							//Create an edge
-								   							let edge = Edge::<E>{node: strong_to, weight: weight};
-
-								   							let from_ref = strong_from.borrow_mut();
-
-								   							//Filter out all edges already existing to to
-								   							*from_ref.edges.retain(|x| *x.node != *strong_to);
-
-								   							//add in the new edge
-								   							*from_ref.edges.push_front(edge);
-								   							Ok()
-								   							},
-								   		None			=> Err()
-								   },
-			None				=> Err()
+			Some(_) => Ok(),
+			None	=> Err()
 		}
 	}
 
