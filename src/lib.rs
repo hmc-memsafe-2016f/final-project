@@ -37,20 +37,47 @@ struct Edge<E> {
 
 /// Iterator struct which keeps track of the location of a vertex within the Graph
 /// struct. Can be used to iterate over vertices in an arbitrary order.
-pub struct vIter<'a, V: 'a, E: 'a> {
+pub struct VRef<'a, V: 'a, E: 'a> {
     index: usize,
     graph: &'a Graph<V, E>,
 }
-impl<'a, V, E> Deref for vIter<'a, V, E> {
+impl<'a, V, E> Clone for VRef<'a, V, E> {
+    fn clone(&self) -> Self {
+        VRef{ index: self.index, graph: self.graph }
+    }
+}
+impl<'a, V, E> Copy for VRef<'a, V, E> {
+}
+
+impl<'a, V, E> Deref for VRef<'a, V, E> {
     type Target = V;
     fn deref(&self) -> &V {
         unimplemented!()
     }
 }
 
+pub struct VIter<'a, V: 'a, E: 'a> {
+    r: VRef<'a, V, E>,
+}
+
+impl<'a, V, E> Iterator for VIter<'a, V, E> {
+    type Item = VRef<'a, V, E>;
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.r.index < self.r.graph.num_vertices() {
+            let old_ref = VRef{ index: self.r.index, graph: self.r.graph };
+            self.r.index = self.r.index + 1;
+            Some(old_ref)
+        }
+        else {
+            None
+        }
+    }
+}
+
 pub struct eIter<'a, E: 'a> {
     iter: linked_list::Iter<'a, Edge<E>>
 }
+
 impl<'a, E> Deref for eIter<'a, E> {
     type Target = E;
     fn deref(&self) -> &E {
@@ -59,37 +86,47 @@ impl<'a, E> Deref for eIter<'a, E> {
 }
 
 // Some functions require types V and E to have default values
-impl<V: Hash + Eq, E: Default> Graph<V, E> {
+impl<'a, V: Hash + Eq + Copy + Clone, E: Default> Graph<V, E> {
+    /// Returns an iterator that ranges over all vertices in arbitrary order.
+    pub fn vertices(&'a self) -> VIter<'a, V, E> {
+        VIter{ r: VRef{ index: 0, graph: &self } }
+    }
+
     /// Construct a graph without data, with default values for V and E
     /// and populates the given iters vector with iterators to the added vectors
     /// in the order they were encountered. Clears the given vector before
     /// populating.
     #[allow(unused_variables)]
-    pub fn new_from_edges_populate_iters(edges: &Vec<(V, V)>,
-                                         iters: &mut Vec<vIter<V,E>>) -> Self {
-        let g = Graph::new();
-        iters.clear();
-        let mut iter_map = HashMap::new();
-        for (u, v) in edges.as_ref() {
-                if !iter_map.contains_key(u) {
-                    let iter : vIter<V,E> = g.add_vertex(*u);
-                    iters.push(iter);
-                    iter_map.insert(u, iters.last().unwrap());
-                }
-                if !iter_map.contains_key(v) {
-                    let iter : vIter<V,E> = g.add_vertex(*v);
-                    iter_map.insert(v, iters.last().unwrap());
-                    iters.push(iter);
-                }
-            g.add_edge(iter_map.get(u).unwrap(), iter_map.get(v).unwrap(), E::default());
+    pub fn extend_with_edges(&'a self, edges: &Vec<(V, V)>) -> Vec<VRef<'a, V, E>> {
+        let mut vrefs : Vec<VRef<'a, V, E>> = Vec::new();
+        let mut ref_map = HashMap::new();
+
+        for vref in self.vertices() {
+            ref_map.insert(*vref, vref);
         }
-        g
+
+        for &(u, v) in edges {
+                if !ref_map.contains_key(&u) {
+                    let vref : VRef<'a, V, E> = self.add_vertex(u);
+                    vrefs.push(vref);
+                    ref_map.insert(u, vref);
+                }
+                if !ref_map.contains_key(&v) {
+                    let vref = self.add_vertex(v);
+                    vrefs.push(vref);
+                    ref_map.insert(v, vref);
+                }
+            self.add_edge(ref_map.get(&u).unwrap(), ref_map.get(&v).unwrap(), E::default());
+        };
+        vrefs
     }
     /// Construct a graph without data, with default values for V and E
     #[allow(unused_variables)]
     pub fn new_from_edges(edges: &Vec<(V, V)>) -> Self {
-        let mut v = Vec::new();
-        Graph::new_from_edges_populate_iters(edges, &mut v);
+        //let mut v = Vec::new();
+        //let g: Graph<V, E> = Graph::new_from_edges_populate_iters(edges, &mut v);
+        //return g;
+        unimplemented!()
     }
 }
 
@@ -99,37 +136,37 @@ impl<V, E> Graph<V, E> {
         Graph{ adj_list: Vec::new(), vertices: Vec::new() }
     }
 
-    /// Add a vertex to a graph, returning an vIter to the inserted vertex.
-    /// The lifetime of the vIter is limited to the lifetime of the inserted
+    /// Add a vertex to a graph, returning an VRef to the inserted vertex.
+    /// The lifetime of the VRef is limited to the lifetime of the inserted
     /// vertex.
     #[allow(unused_variables)]
-    //pub fn add_vertex(&'a mut self, v: Vertex<V>) -> 'a vIter<V, E> {
+    //pub fn add_vertex(&'a mut self, v: Vertex<V>) -> 'a VRef<V, E> {
     //TODO Alex, is it even possible to put a lifetime to a nonreference opject
-    //as we want to do here? We want to ensure that vIter will not outlive the
+    //as we want to do here? We want to ensure that VRef will not outlive the
     //graph for saftey reasons.
-    //One of our ideas for making this work would be to have an vIter contain a
-    //reference to an index and insist the the vIter not outlive that reference.
-    //We could then return an vIter out of references that do not outlive
+    //One of our ideas for making this work would be to have an VRef contain a
+    //reference to an index and insist the the VRef not outlive that reference.
+    //We could then return an VRef out of references that do not outlive
     //their graph.
-    pub fn add_vertex(&self, v: V) -> vIter<V, E> {
+    pub fn add_vertex(&self, v: V) -> VRef<V, E> {
         unimplemented!()
-        //vIter<V, E> { index: }
+        //VRef<V, E> { index: }
     }
 
     /// Add an edge to a graph if there is not currently an edge between those
     /// vertices.  Returns true if successful, and false otherwise.
     #[allow(unused_variables)]
-    pub fn add_edge(&self, v1: &vIter<V, E>, v2: &vIter<V, E>, value: E) ->
+    pub fn add_edge(&self, v1: &VRef<V, E>, v2: &VRef<V, E>, value: E) ->
         Option<eIter<E>> {
         //TODO Ask Alex if this return type is weird (gets back to the "should
-        //we have edge vIters?" question).
+        //we have edge VRefs?" question).
         unimplemented!()
     }
 
     /// Returns the old value associated with vertex v and replaces it with the
     /// given value.
     #[allow(unused_variables)]
-    pub fn replace_vertex(&self, v: &vIter<V, E>, value: V) -> PhantomData<V> {
+    pub fn replace_vertex(&self, v: &VRef<V, E>, value: V) -> PhantomData<V> {
         Default::default()
     }
 
@@ -137,20 +174,20 @@ impl<V, E> Graph<V, E> {
     /// value in its place, unless there was no such edge, in which case it
     /// lets the value die and returns None.
     #[allow(unused_variables)]
-    pub fn replace_edge(&self, v1: &vIter<V, E>, v2: &vIter<V, E>, value: E) ->
+    pub fn replace_edge(&self, v1: &VRef<V, E>, v2: &VRef<V, E>, value: E) ->
         Option<E> {
         None
     }
 
     /// Returns a vector of terators neighboring the given vertex.
     #[allow(unused_variables)]
-    pub fn get_neighbors(&self, v: &vIter<V, E>) -> Vec<vIter<V, E>> {
+    pub fn get_neighbors(&self, v: &VRef<V, E>) -> Vec<VRef<V, E>> {
         Vec::new()
     }
 
     /// Returns whether or not the given vertices are adjacent.
     #[allow(unused_variables)]
-    pub fn adjacent(&self, v1: &vIter<V, E>, v2: &vIter<V, E>) -> bool {
+    pub fn adjacent(&self, v1: &VRef<V, E>, v2: &VRef<V, E>) -> bool {
         true
     }
 
