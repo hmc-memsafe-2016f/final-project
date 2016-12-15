@@ -6,34 +6,40 @@
 /// let x = Graph::new();
 /// ```
 
+use std::collections::LinkedList;
 use std::marker::PhantomData;
 
 /// A data structure which represents a mathematical graph.
 /// It is implemented as an adjacency list (a vector of Linked Lists) together
-/// with a Vector of Boxed vertices.
-pub struct Graph<V, E> {
-    phantom: PhantomData<(V, E)>,
+/// with a Vector of vertices.
+pub struct Graph<'a, V, E> {
+    adj_list: Vec<LinkedList<Edge<E>>>,
+    vertices: Vec<Vertex<V>>,
 }
 
 /// A vertex, can be inserted into a Graph and holds data of arbitrary type.
 pub struct Vertex<V> {
-    value: PhantomData<V>,
+    contents: V,
 }
 
 /// A private struct in the Graph's adjacency list which keeps indices to
 /// both endpoints and the data associated with the edge.
-#[allow(dead_code)]
 struct Edge<E> {
     parent: usize,
     child: usize,
-    weight: PhantomData<E>,
+    weight: E,
 }
 
-/// A struct which keeps track of the location of a vertex within the Graph
-/// struct.  Can be used to iterate over vertices in an arbitrary order.
-pub struct Iter {}
-//TODO Ask Alex, is it bad to not have an Iter for edges? Petgraph does...
-//Not doing so means replace_edge is not constant time.
+/// Iterator struct which keeps track of the location of a vertex within the Graph
+/// struct. Can be used to iterate over vertices in an arbitrary order.
+pub struct vIter<'a, V, E> {
+    index: usize,
+    _lifetime: PhantomData<&'a Graph<V, E>>,
+}
+
+//pub struct eIter {
+//
+//}
 
 impl<V, E> Graph<V, E> {
 
@@ -48,35 +54,36 @@ impl<V, E> Graph<V, E> {
         Graph { phantom: Default::default() }
     }
 
-    /// Add a vertex to a graph, returning an Iter to the inserted vertex.
-    /// The lifetime of the Iter is limited to the lifetime of the inserted
+    /// Add a vertex to a graph, returning an vIter to the inserted vertex.
+    /// The lifetime of the vIter is limited to the lifetime of the inserted
     /// vertex.
     #[allow(unused_variables)]
-    //pub fn add_vertex(&'a mut self, v: Vertex<V>) -> 'a Iter {
+    //pub fn add_vertex(&'a mut self, v: Vertex<V>) -> 'a vIter<V, E> {
     //TODO Alex, is it even possible to put a lifetime to a nonreference opject
-    //as we want to do here? We want to ensure that Iter will not outlive the
+    //as we want to do here? We want to ensure that vIter will not outlive the
     //graph for saftey reasons.
-    //One of our ideas for making this work would be to have an Iter contain a
-    //reference to an index and insist the the Iter not outlive that reference.
-    //We could then return an Iter out of references that do not outlive
+    //One of our ideas for making this work would be to have an vIter contain a
+    //reference to an index and insist the the vIter not outlive that reference.
+    //We could then return an vIter out of references that do not outlive
     //their graph.
-    pub fn add_vertex(&mut self, v: Vertex<V>) -> Iter {
-        Iter {}
+    pub fn add_vertex(&mut self, v: Vertex<V>) -> vIter<V, E> {
+        unimplemented!()
+        //vIter<V, E> { index: }
     }
 
     /// Add an edge to a graph if there is not currently an edge between those
     /// vertices.  Returns true if successful, and false otherwise.
     #[allow(unused_variables)]
-    pub fn add_edge(&mut self, v1: &Iter, v2: &Iter, value: E) -> bool {
+    pub fn add_edge(&mut self, v1: &vIter<V, E>, v2: &vIter<V, E>, value: E) -> bool {
         //TODO Ask Alex if this return type is weird (gets back to the "should
-        //we have edge Iters?" question).
+        //we have edge vIters?" question).
         true
     }
 
     /// Returns the old value associated with vertex v and replaces it with the
     /// given value.
     #[allow(unused_variables)]
-    pub fn replace_vertex(&mut self, v: &Iter, value: V) -> PhantomData<V> {
+    pub fn replace_vertex(&mut self, v: &vIter<V, E>, value: V) -> PhantomData<V> {
         Default::default()
     }
 
@@ -84,7 +91,7 @@ impl<V, E> Graph<V, E> {
     /// value in its place, unless there was no such edge, in which case it
     /// lets the value die and returns None.
     #[allow(unused_variables)]
-    pub fn replace_edge(&mut self, v1: &Iter, v2: &Iter, value: E) ->
+    pub fn replace_edge(&mut self, v1: &vIter<V, E>, v2: &vIter<V, E>, value: E) ->
         Option<E> {
         None
     }
@@ -93,7 +100,7 @@ impl<V, E> Graph<V, E> {
     /// We consume the Graph object so that the compiler prevents existing
     /// Iters from being used after their invalidation.
     #[allow(unused_variables)]
-    pub fn delete_vertex(self, v: Iter) -> Self {
+    pub fn delete_vertex(self, v: vIter<V, E>) -> Self {
         //TODO Alex, is this appropriate? Our plan was to consume the Graph
         //in any method which invalidates iterators so that all iterators from
         //before the call can be statically determined to be invalid after
@@ -104,30 +111,30 @@ impl<V, E> Graph<V, E> {
     /// Returns Some(value) associated with the edge between v1 and v2 or None
     /// if there was no such edge.
     #[allow(unused_variables)]
-    pub fn delete_edge(&mut self, v1: &Iter, v2: &Iter) -> Option<E> {
+    pub fn delete_edge(&mut self, v1: &vIter<V, E>, v2: &vIter<V, E>) -> Option<E> {
         None
     }
 
     /// Returns a vector of terators neighboring the given vertex.
     #[allow(unused_variables)]
-    pub fn get_neighbors(&self, v: &Iter) -> Vec<Iter> {
+    pub fn get_neighbors(&self, v: &vIter<V, E>) -> Vec<vIter<V, E>> {
         Vec::new()
     }
 
-    /// Returns a pair (Graph, Option<Iter>) where the element one is a new
-    /// Graph and element two is an Iter to the vertex which results from
+    /// Returns a pair (Graph, Option<vIter>) where the element one is a new
+    /// Graph and element two is an vIter to the vertex which results from
     /// contracting the given edge, or None if the edge did not exist.
     #[allow(unused_variables)]
-    pub fn contract_edge(self, v1: Iter, v2: Iter) ->
-        //('a Self, Option<'a Iter>) {
-        //TODO Hi Alex, this is the same issue as the other lifetime question.
-        (Self, Option<Iter>) {
-            (self, None)
+    pub fn contract_edge(&mut self, v1: vIter<V, E>, v2: vIter<V, E>) ->
+        Option<'a, vIter<V, E>> {
+        //(Self, Option<vIter<V, E>>) {
+            //(self, None)
+        unimplemented!()
     }
 
     /// Returns whether or not the given vertices are adjacent.
     #[allow(unused_variables)]
-    pub fn adjacent(&self, v1: &Iter, v2: &Iter) -> bool {
+    pub fn adjacent(&self, v1: &vIter<V, E>, v2: &vIter<V, E>) -> bool {
         true
     }
 
