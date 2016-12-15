@@ -12,7 +12,7 @@ use std::marker::PhantomData;
 /// A data structure which represents a mathematical graph.
 /// It is implemented as an adjacency list (a vector of Linked Lists) together
 /// with a Vector of vertices.
-pub struct Graph<'a, V, E> {
+pub struct Graph<V, E> {
     adj_list: Vec<LinkedList<Edge<E>>>,
     vertices: Vec<Vertex<V>>,
 }
@@ -32,10 +32,11 @@ struct Edge<E> {
 
 /// Iterator struct which keeps track of the location of a vertex within the Graph
 /// struct. Can be used to iterate over vertices in an arbitrary order.
-pub struct vIter<'a, V, E> {
+pub struct vIter<'a, V: 'a, E: 'a> {
     index: usize,
-    _lifetime: PhantomData<&'a Graph<V, E>>,
+    graph: &'a Graph<V, E>,
 }
+//TODO implement dereference
 
 //pub struct eIter {
 //
@@ -45,13 +46,13 @@ impl<V, E> Graph<V, E> {
 
     /// Create a new, empty graph
     pub fn new() -> Self {
-        Graph { phantom: Default::default() }
+        unimplemented!()
     }
 
     /// Construct a graph without data, just for its topology
     #[allow(unused_variables)]
     pub fn new_from_edges(edges: Vec<(u32, u32)>) -> Self {
-        Graph { phantom: Default::default() }
+        unimplemented!()
     }
 
     /// Add a vertex to a graph, returning an vIter to the inserted vertex.
@@ -96,40 +97,10 @@ impl<V, E> Graph<V, E> {
         None
     }
 
-    /// Delete vertex from a graph, returning a new Graph.
-    /// We consume the Graph object so that the compiler prevents existing
-    /// Iters from being used after their invalidation.
-    #[allow(unused_variables)]
-    pub fn delete_vertex(self, v: vIter<V, E>) -> Self {
-        //TODO Alex, is this appropriate? Our plan was to consume the Graph
-        //in any method which invalidates iterators so that all iterators from
-        //before the call can be statically determined to be invalid after
-        //a call to a method that consumes self.
-        self
-    }
-
-    /// Returns Some(value) associated with the edge between v1 and v2 or None
-    /// if there was no such edge.
-    #[allow(unused_variables)]
-    pub fn delete_edge(&mut self, v1: &vIter<V, E>, v2: &vIter<V, E>) -> Option<E> {
-        None
-    }
-
     /// Returns a vector of terators neighboring the given vertex.
     #[allow(unused_variables)]
     pub fn get_neighbors(&self, v: &vIter<V, E>) -> Vec<vIter<V, E>> {
         Vec::new()
-    }
-
-    /// Returns a pair (Graph, Option<vIter>) where the element one is a new
-    /// Graph and element two is an vIter to the vertex which results from
-    /// contracting the given edge, or None if the edge did not exist.
-    #[allow(unused_variables)]
-    pub fn contract_edge(&mut self, v1: vIter<V, E>, v2: vIter<V, E>) ->
-        Option<'a, vIter<V, E>> {
-        //(Self, Option<vIter<V, E>>) {
-            //(self, None)
-        unimplemented!()
     }
 
     /// Returns whether or not the given vertices are adjacent.
