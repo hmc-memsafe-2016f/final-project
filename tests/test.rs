@@ -1,6 +1,6 @@
 extern crate graph_api;
 
-use graph_api::{Graph,Vertex,algorithm};   
+use graph_api::{Graph,algorithm};   
 
 #[test]
 fn basic_test() {
@@ -14,6 +14,7 @@ fn basic_test() {
     assert!(graph.has_edge(a,c));
     assert!(!graph.has_edge(b,c));
     assert!(!graph.has_edge(c,a));
+    
 }
 
 #[test]

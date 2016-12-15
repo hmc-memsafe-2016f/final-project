@@ -1,47 +1,47 @@
 use Graph;
-use Vertex;
+use VIndex;
 use std::ops::Add;
 
-fn plus<N>(a: Option<N>, b: Option<N>) -> Option<N> 
-where N: Add<Output=N> {
+fn plus<N>(a: Option<N>, b: Option<N>) -> Option<N>
+    where N: Add<Output = N>
+{
     match (a, b) {
-        (Some(a), Some(b)) => Some(a+b),
-        (_,       _      ) => None
+        (Some(a), Some(b)) => Some(a + b),
+        (_, _) => None,
     }
 }
 
 fn greater<N: PartialOrd>(a: Option<N>, b: Option<N>) -> bool {
     match (a, b) {
         (Some(a), Some(b)) => a > b,
-        (None,    Some(_)) => true,
-        (_,       None   ) => false,
+        (None, Some(_)) => true,
+        (_, None) => false,
     }
 }
 
-pub struct ShortestPaths<'a,E:'a> {
+pub struct ShortestPaths<'a, E: 'a> {
     graph: &'a Graph<E>,
     dist: Vec<Vec<Option<E>>>,
-    next: Vec<Vec<Option<Vertex>>>,
+    next: Vec<Vec<Option<VIndex>>>,
 }
 
-impl <'a,E: Copy> ShortestPaths<'a,E> {
-
-    pub fn is_path(&self, from: Vertex, to: Vertex) -> bool {
+impl<'a, E: Copy> ShortestPaths<'a, E> {
+    pub fn is_path(&self, from: VIndex, to: VIndex) -> bool {
         self.dist[from][to].is_some()
     }
 
-    pub fn path_distance(&self, from: Vertex, to: Vertex) -> Option<E> {
+    pub fn path_distance(&self, from: VIndex, to: VIndex) -> Option<E> {
         self.dist[from][to]
     }
 
-    pub fn path(&self, mut from: Vertex, to: Vertex) -> Vec<(Vertex, Vertex, &'a E)> {
+    pub fn path(&self, mut from: VIndex, to: VIndex) -> Vec<(VIndex, VIndex, &'a E)> {
         let mut path = Vec::new();
         while let Some(nxt) = self.next[from][to] {
             let weight = self.graph.weight(from, nxt).unwrap();
             let e = (from, nxt, weight);
             path.push(e);
             if nxt == to {
-                break
+                break;
             };
             from = nxt;
         }
@@ -51,18 +51,15 @@ impl <'a,E: Copy> ShortestPaths<'a,E> {
     pub fn to_distance_matrix(self) -> Vec<Vec<Option<E>>> {
         self.dist
     }
-
 }
 
-pub fn floyd_warshall<'a,E>(g: &'a Graph<E>) -> ShortestPaths<'a,E> 
-where E     : Add<Output=E> + PartialOrd + Copy {
+pub fn floyd_warshall<'a, E>(g: &'a Graph<E>) -> ShortestPaths<'a, E>
+    where E: Add<Output = E> + PartialOrd + Copy
+{
 
-    let mut dist : Vec<Vec<Option<E>>> = vec![vec![None; g.size()]; g.size()];
+    let mut dist: Vec<Vec<Option<E>>> = vec![vec![None; g.size()]; g.size()];
     let mut next = vec![vec![None; g.size()]; g.size()];
-    // for i in 0..g.vertices {
-    //     dist[i][i] = Some(Zero::zero());
-    //     next[i][i] = Some(i);
-    // }
+
     for edge in g.edges() {
         dist[edge.from()][edge.to()] = Some(*edge.weight());
         next[edge.from()][edge.to()] = Some(edge.to());
@@ -81,5 +78,9 @@ where E     : Add<Output=E> + PartialOrd + Copy {
         dist[i][i] = None;
         next[i][i] = None;
     }
-    ShortestPaths { graph: g, dist: dist, next: next }
+    ShortestPaths {
+        graph: g,
+        dist: dist,
+        next: next,
+    }
 }
