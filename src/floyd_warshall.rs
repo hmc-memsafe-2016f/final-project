@@ -2,23 +2,6 @@ use Graph;
 use VIndex;
 use std::ops::Add;
 
-fn plus<N>(a: Option<N>, b: Option<N>) -> Option<N>
-    where N: Add<Output = N>
-{
-    match (a, b) {
-        (Some(a), Some(b)) => Some(a + b),
-        (_, _) => None,
-    }
-}
-
-fn greater<N: PartialOrd>(a: Option<N>, b: Option<N>) -> bool {
-    match (a, b) {
-        (Some(a), Some(b)) => a > b,
-        (None, Some(_)) => true,
-        (_, None) => false,
-    }
-}
-
 pub struct ShortestPaths<'a, E: 'a> {
     graph: &'a Graph<E>,
     dist: Vec<Vec<Option<E>>>,
@@ -60,9 +43,9 @@ pub fn floyd_warshall<'a, E>(g: &'a Graph<E>) -> ShortestPaths<'a, E>
     let mut dist: Vec<Vec<Option<E>>> = vec![vec![None; g.size()]; g.size()];
     let mut next = vec![vec![None; g.size()]; g.size()];
 
-    for edge in g.edges() {
-        dist[edge.from()][edge.to()] = Some(*edge.weight());
-        next[edge.from()][edge.to()] = Some(edge.to());
+    for (from, to) in g.edges() {
+        dist[from][to] = g.weight(from, to).map(|index| *index);
+        next[from][to] = Some(to);
     }
     for k in 0..g.size() {
         for i in 0..g.size() {
@@ -82,5 +65,23 @@ pub fn floyd_warshall<'a, E>(g: &'a Graph<E>) -> ShortestPaths<'a, E>
         graph: g,
         dist: dist,
         next: next,
+    }
+}
+
+
+fn plus<N>(a: Option<N>, b: Option<N>) -> Option<N>
+    where N: Add<Output = N>
+{
+    match (a, b) {
+        (Some(a), Some(b)) => Some(a + b),
+        (_, _) => None,
+    }
+}
+
+fn greater<N: PartialOrd>(a: Option<N>, b: Option<N>) -> bool {
+    match (a, b) {
+        (Some(a), Some(b)) => a > b,
+        (None, Some(_)) => true,
+        (_, None) => false,
     }
 }

@@ -1,3 +1,5 @@
+use std::vec::IntoIter;
+
 pub struct Graph<E> {
     matrix: Vec<Vec<Option<E>>>,
     size: usize,
@@ -5,26 +7,9 @@ pub struct Graph<E> {
 
 pub type VIndex = usize;
 
-pub struct Edge<'a, E: 'a> {
-    from: VIndex,
-    to: VIndex,
-    weight: &'a E,
-}
-
-impl<'a, E: 'a> Edge<'a, E> {
-    pub fn from(&self) -> VIndex {
-        self.from
-    }
-    pub fn to(&self) -> VIndex {
-        self.to
-    }
-    pub fn weight(&self) -> &'a E {
-        self.weight
-    }
-}
+pub type Edge = (VIndex, VIndex);
 
 impl<E> Graph<E> {
-
     pub fn new() -> Self {
         Graph {
             matrix: Vec::new(),
@@ -61,12 +46,8 @@ impl<E> Graph<E> {
         self.matrix[from][to].as_ref()
     }
 
-    pub fn edges<'a>(&'a self) -> Edges<'a, E> {
-        Edges {
-            graph: &self,
-            from: 0,
-            to: usize::max_value(),
-        }
+    pub fn edges(&self) -> Edges {
+        Edges::new(self)
     }
 
     pub fn remove_vertex(mut self, index: VIndex) -> Graph<E> {
@@ -82,35 +63,35 @@ impl<E> Graph<E> {
         self.matrix[from][to] = None;
         self
     }
-
 }
 
-pub struct Edges<'a, E: 'a> {
-    graph: &'a Graph<E>,
-    from: VIndex,
-    to: VIndex,
+pub struct Edges {
+    iter: IntoIter<Edge>,
 }
 
-impl<'a, E> Iterator for Edges<'a, E> {
-    type Item = Edge<'a, E>;
-    fn next(&mut self) -> Option<Edge<'a, E>> {
-        self.to = self.to.wrapping_add(1);
-        if self.to >= self.graph.size {
-            self.from += 1;
-            self.to = 0;
-        }
-        if self.from >= self.graph.size {
-            return None;
-        }
-        match self.graph.matrix[self.from][self.to] {
-            Some(ref weight) => {
-                Some(Edge {
-                    from: self.from,
-                    to: self.to,
-                    weight: weight,
-                })
+impl Edges {
+    fn new<E>(graph: &Graph<E>) -> Edges {
+        let mut edges = Vec::new();
+        let mut from = 0;
+        let mut to = 0;
+        while from < graph.size() {
+            if let Some(_) = graph.matrix[from][to] {
+                edges.push((from, to));
             }
-            None => self.next(),
+            to += 1;
+            if to >= graph.size {
+                from += 1;
+                to = 0;
+            }
         }
+        Edges { iter: edges.into_iter() }
+    }
+}
+
+impl Iterator for Edges {
+    type Item = Edge;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.iter.next()
     }
 }
