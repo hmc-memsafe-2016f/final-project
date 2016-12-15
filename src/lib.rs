@@ -68,7 +68,7 @@ impl<N, E: Ord> Graph<N, E>
 			to.upgrade().and_then(|strong_to|
 			{
 				//Create an edge
-				let edge = Edge::<E>{node: strong_to, weight: weight};
+				let edge = Edge::<N, E>{node: strong_to, weight: weight};
 				let from_ref = strong_from.borrow_mut();
 
 				//filter out all eddges already existing to to
@@ -80,7 +80,7 @@ impl<N, E: Ord> Graph<N, E>
 			}
 			))
 		{
-			Some(_) => Ok(),
+			Some(_) => Ok(()),
 			None	=> Err(())
 		}
 	}
@@ -94,41 +94,26 @@ impl<N, E: Ord> Graph<N, E>
 	///`Err` if the edge already existed or if either node doesn't exist anymore
 	pub fn create_edge_undirected(&mut self, from: &WeakNodeReference<N, E>, to: &WeakNodeReference<N, E>, weight: E) -> Result<(), ()>
 	{
-		/*
-		from.upgrade().map(|strong_from| 
-			to.upgrade().map(|strong_to| 
-				let to_edge = Edge<E>{node: strong_to, weight: weight};
-				let from_edge = Edge<E>{node: strong_from, weight:weight};
-
+		match from.upgrade().and_then(|strong_from|
+			to.upgrade().and_then(|strong_to|
+			{
+				let to_edge = Edge::<N, E>{node: strong_to, weight: weight};
+				let from_edge = Edge::<N, E>{node: strong_from, weight: weight};
 				let from_ref = strong_from.borrow_mut();
 				let to_ref = strong_to.borrow_mut();
 
+				//Filter out all edges already existing to to
+				*from_ref.edges.retain(|x| *x.node != *strong_to);
+				*to_ref.edges.retain(|x| *x.node != *strong_from);
+
 				*from_ref.edges.push_front(to_edge);
 				*to_ref.edges.push_front(from_edge);
-				)).ok_or(())
-		*/
-
-		match from.upgrade()
+				Some()
+			}
+			))
 		{
-			Some(strong_from)	=> match to.upgrade()
-								   {
-								   		Some(strong_to) => {
-								   							let to_edge = Edge::<E>{node: strong_to, weight: weight};
-								   							let from_edge = Edge::<E>{node: strong_from, weight: weight};
-								   							let from_ref = strong_from.borrow_mut();
-								   							let to_ref = strong_to.borrow_mut();
-
-															//Filter out all edges already existing to to
-								   							*from_ref.edges.retain(|x| *x.node != *strong_to);
-								   							*to_ref.edges.retain(|x| *x.node != *strong_from);
-
-								   							*from_ref.edges.push_front(to_edge);
-								   							*to_ref.edges.push_front(from_edge);
-								   							Ok()
-								   							},
-								   		None			=> Err(())
-								   },
-			None				=> Err(())
+			Some(_) => Ok(()),
+			None	=> Err(())
 		}
 	}
 
