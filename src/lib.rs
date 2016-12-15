@@ -7,7 +7,12 @@
 /// ```
 
 use std::collections::LinkedList;
+use std::collections::HashMap;
+use std::collections::linked_list;
 use std::marker::PhantomData;
+use std::ops::Deref;
+use std::hash::Hash;
+use std::cmp::Eq;
 
 /// A data structure which represents a mathematical graph.
 /// It is implemented as an adjacency list (a vector of Linked Lists) together
@@ -36,23 +41,62 @@ pub struct vIter<'a, V: 'a, E: 'a> {
     index: usize,
     graph: &'a Graph<V, E>,
 }
-//TODO implement dereference
-
-//pub struct eIter {
-//
-//}
-
-impl<V, E> Graph<V, E> {
-
-    /// Create a new, empty graph
-    pub fn new() -> Self {
+impl<'a, V, E> Deref for vIter<'a, V, E> {
+    type Target = V;
+    fn deref(&self) -> &V {
         unimplemented!()
     }
+}
 
-    /// Construct a graph without data, just for its topology
-    #[allow(unused_variables)]
-    pub fn new_from_edges(edges: Vec<(u32, u32)>) -> Self {
+pub struct eIter<'a, E: 'a> {
+    iter: linked_list::Iter<'a, Edge<E>>
+}
+impl<'a, E> Deref for eIter<'a, E> {
+    type Target = E;
+    fn deref(&self) -> &E {
         unimplemented!()
+    }
+}
+
+// Some functions require types V and E to have default values
+impl<V: Hash + Eq, E: Default> Graph<V, E> {
+    /// Construct a graph without data, with default values for V and E
+    /// and populates the given iters vector with iterators to the added vectors
+    /// in the order they were encountered. Clears the given vector before
+    /// populating.
+    #[allow(unused_variables)]
+    pub fn new_from_edges_populate_iters(edges: &Vec<(V, V)>,
+                                         iters: &mut Vec<vIter<V,E>>) -> Self {
+        let g = Graph::new();
+        iters.clear();
+        let mut iter_map = HashMap::new();
+        for (u, v) in edges.as_ref() {
+                if !iter_map.contains_key(u) {
+                    let iter : vIter<V,E> = g.add_vertex(*u);
+                    iters.push(iter);
+                    iter_map.insert(u, iters.last().unwrap());
+                }
+                if !iter_map.contains_key(v) {
+                    let iter : vIter<V,E> = g.add_vertex(*v);
+                    iter_map.insert(v, iters.last().unwrap());
+                    iters.push(iter);
+                }
+            g.add_edge(iter_map.get(u).unwrap(), iter_map.get(v).unwrap(), E::default());
+        }
+        g
+    }
+    /// Construct a graph without data, with default values for V and E
+    #[allow(unused_variables)]
+    pub fn new_from_edges(edges: &Vec<(V, V)>) -> Self {
+        let mut v = Vec::new();
+        Graph::new_from_edges_populate_iters(edges, &mut v);
+    }
+}
+
+impl<V, E> Graph<V, E> {
+    /// Create a new, empty graph
+    pub fn new() -> Self {
+        Graph{ adj_list: Vec::new(), vertices: Vec::new() }
     }
 
     /// Add a vertex to a graph, returning an vIter to the inserted vertex.
@@ -67,7 +111,7 @@ impl<V, E> Graph<V, E> {
     //reference to an index and insist the the vIter not outlive that reference.
     //We could then return an vIter out of references that do not outlive
     //their graph.
-    pub fn add_vertex(&mut self, v: Vertex<V>) -> vIter<V, E> {
+    pub fn add_vertex(&self, v: V) -> vIter<V, E> {
         unimplemented!()
         //vIter<V, E> { index: }
     }
@@ -75,16 +119,17 @@ impl<V, E> Graph<V, E> {
     /// Add an edge to a graph if there is not currently an edge between those
     /// vertices.  Returns true if successful, and false otherwise.
     #[allow(unused_variables)]
-    pub fn add_edge(&mut self, v1: &vIter<V, E>, v2: &vIter<V, E>, value: E) -> bool {
+    pub fn add_edge(&self, v1: &vIter<V, E>, v2: &vIter<V, E>, value: E) ->
+        Option<eIter<E>> {
         //TODO Ask Alex if this return type is weird (gets back to the "should
         //we have edge vIters?" question).
-        true
+        unimplemented!()
     }
 
     /// Returns the old value associated with vertex v and replaces it with the
     /// given value.
     #[allow(unused_variables)]
-    pub fn replace_vertex(&mut self, v: &vIter<V, E>, value: V) -> PhantomData<V> {
+    pub fn replace_vertex(&self, v: &vIter<V, E>, value: V) -> PhantomData<V> {
         Default::default()
     }
 
@@ -92,7 +137,7 @@ impl<V, E> Graph<V, E> {
     /// value in its place, unless there was no such edge, in which case it
     /// lets the value die and returns None.
     #[allow(unused_variables)]
-    pub fn replace_edge(&mut self, v1: &vIter<V, E>, v2: &vIter<V, E>, value: E) ->
+    pub fn replace_edge(&self, v1: &vIter<V, E>, v2: &vIter<V, E>, value: E) ->
         Option<E> {
         None
     }
@@ -123,7 +168,7 @@ impl<V, E> Graph<V, E> {
 
     /// Returns the adjacency matrix for the given graph.
     #[allow(unused_variables)]
-    pub fn get_adjacency_matrix(&self) -> Vec<Vec<&E> > {
+    pub fn get_adjacency_matrix(&self) -> Vec<usize> {
         //TODO Ask Alex if Vec<Vec>> is a reasonable matrix representation.
         Vec::new()
     }
@@ -148,4 +193,6 @@ mod tests {
     fn it_works() {
     }
 }
+
+
 */
