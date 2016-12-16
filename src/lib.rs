@@ -30,7 +30,7 @@ pub struct Vertex<V> {
 
 /// A public struct in the Graph's adjacency list which keeps indices to
 /// both endpoints and the data associated with the edge.
-#[derive(Debug)]
+#[derive(Debug, PartialOrd, PartialEq, Eq, Ord)]
 pub struct Edge<E> {
     pub parent: usize,
     pub child: usize,
@@ -56,12 +56,14 @@ impl<'a, V, E> Copy for VRef<'a, V, E> {
 /// Returns an EIter which iterates over the edges of a vertex
 impl<'a, V, E> VRef<'a, V, E> {
     pub fn edges(&self) -> EIter<'a, E> {
-        //unimplemented!()
-        let adj_list: &'a Vec<LinkedList<Edge<E>>>= &self.graph.adj_list.read().unwrap();
+        unimplemented!()
+        /*
+        let adj_list = &self.graph.adj_list.read().unwrap();
         unsafe {
             let it = &adj_list[self.index].iter() as *const linked_list::Iter<'a, Edge<E>>;
             EIter { iter: std::ptr::read(it) }
         }
+        */
     }
 }
 
@@ -151,6 +153,11 @@ impl<'a, V: Hash + Eq + Copy + Clone, E: Default + Copy + Clone + PartialEq> Gra
             self.add_directed_edge(ref_map.get(&u).unwrap(), ref_map.get(&v).unwrap(), E::default());
         };
         vrefs
+    }
+    pub fn endpoints(&'a self, e: Edge<E>) -> (VRef<'a, V, E>, VRef<'a, V, E>) {
+        let parent = VRef { index: e.parent, graph: self };
+        let child = VRef { index: e.child, graph: self };
+        (parent, child)
     }
 }
 
@@ -248,8 +255,12 @@ impl<V, E: Clone + Copy + PartialEq> Graph<V, E> {
         let size = Graph::num_vertices(self);
         let at = |r: usize, c: usize| r * size + c;
         let mut matrix = vec![0; size * size];
-        //for eIter in Graph::edges {
-        //}
+        let adj_list = self.adj_list.read().unwrap();
+        for sublist in adj_list.iter() {
+            for &Edge {parent, child, weight} in sublist {
+                matrix[at(parent, child)] += 1
+            }
+        }
         matrix
     }
 

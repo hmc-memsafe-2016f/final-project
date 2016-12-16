@@ -4,4 +4,9 @@ version = "0.1.0"
 authors = ["Michael Sheely <msheely@hmc.edu>",
         "Jackson Warley <jtwarley@gmail.com>"]
 
+[[bin]]
+name = "kruskal"
+path = "src/kruskal.rs"
+
 [dependencies]
+union-find = "0.3.1"
