@@ -76,7 +76,7 @@ impl<N, E: Eq+Clone> Graph<N, E>
 				let mut from_ref = strong_from.borrow_mut();
 
 				//filter out all eddges already existing to to
-				from_ref.edges.retain(|x| Rc::ptr_eq(&x.node, &strong_to));
+				from_ref.edges.retain(|x| !Rc::ptr_eq(&x.node, &strong_to));
 
 				//add in the new edge
 				from_ref.edges.push(edge);
@@ -216,6 +216,7 @@ impl<N, E: Eq+Clone> Graph<N, E>
 	///Checks if a node still exists
 	///`true` if the node is still in the graph
 	///`false` if it has been deleted
+    /// We don't know how to test this, since we tried to make it so you can't create a fake node
 	pub fn check_node(&self, node: &PossibleNode<N, E>) -> bool
 	{
 		match node.0.upgrade()
