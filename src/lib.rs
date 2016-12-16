@@ -30,10 +30,11 @@ pub struct Vertex<V> {
 
 /// A public struct in the Graph's adjacency list which keeps indices to
 /// both endpoints and the data associated with the edge.
+#[derive(Debug)]
 pub struct Edge<E> {
-    parent: usize,
-    child: usize,
-    weight: E,
+    pub parent: usize,
+    pub child: usize,
+    pub weight: E,
 }
 
 /// Iterator struct which keeps track of the location of a vertex within the Graph
@@ -52,10 +53,23 @@ impl<'a, V, E> Clone for VRef<'a, V, E> {
 impl<'a, V, E> Copy for VRef<'a, V, E> {
 }
 
+/// Returns an EIter which iterates over the edges of a vertex
+impl<'a, V, E> VRef<'a, V, E> {
+    pub fn edges(&self) -> EIter<'a, E> {
+        unimplemented!()
+        //let adj_list = self.graph.adj_list.read().unwrap();
+        //EIter { iter: adj_list[self.index].iter() }
+    }
+}
+
 impl<'a, V, E> Deref for VRef<'a, V, E> {
     type Target = V;
     fn deref(&self) -> &V {
-        unimplemented!()
+        let vertices = self.graph.vertices.read().unwrap();
+        unsafe {
+            let vertex_ptr = &vertices[self.index].contents as *const V;
+            vertex_ptr.as_ref().unwrap()
+        }
     }
 }
 
@@ -184,7 +198,7 @@ impl<V, E: Clone + Copy + PartialEq> Graph<V, E> {
         Default::default()
     }
 
-    /// Returns a vector of terators neighboring the given vertex.
+    /// Returns a Vec<VRef> of those neighboring the given vertex.
     #[allow(unused_variables)]
     pub fn get_neighbors(&self, v: &VRef<V, E>) -> Vec<VRef<V, E>> {
         Vec::new()
@@ -228,8 +242,12 @@ impl<V, E: Clone + Copy + PartialEq> Graph<V, E> {
     /// Returns the adjacency matrix for the given graph.
     #[allow(unused_variables)]
     pub fn get_adjacency_matrix(&self) -> Vec<usize> {
-        //TODO Ask Alex if Vec<Vec>> is a reasonable matrix representation.
-        Vec::new()
+        let size = Graph::num_vertices(self);
+        let at = |r: usize, c: usize| r * size + c;
+        let mut matrix = vec![0; size * size];
+        //for eIter in Graph::edges {
+        //}
+        matrix
     }
 
     /// Returns the Laplacian matrix for the given graph.
