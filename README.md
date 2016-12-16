@@ -1,4 +1,3 @@
-# final-project
-A repository to submit their final project PRs against
-
-Students may want to modify this README
+# Final Project
+This is a simple graph implementation using adjacency lists, with an example use
+case by way of implementing Dijkstra's algorithm.
