@@ -6,13 +6,13 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 use std::rc::Weak;
-use std::iter::Map;
+use std::mem;
 
 type NodeReference<N, E> = Rc<RefCell<Node<N, E>>>;
 
-pub type WeakNodeReference<N, E> = Weak<RefCell<Node<N, E>>>;
+pub struct PossibleNode<N, E>(Weak<RefCell<Node<N, E>>>);
 
-pub struct Graph<N, E: Ord+Copy>
+pub struct Graph<N, E: Eq+Clone>
 {
 	vertices:	Vec<NodeReference<N, E>>
 }
@@ -29,7 +29,7 @@ struct Node<N, E>
 	edges:	Vec<Edge<N, E>>
 }
 
-impl<N, E: Ord+Copy> Graph<N, E>
+impl<N, E: Eq+Clone> Graph<N, E>
 {
 ///Creates a new `Graph`
 	pub fn new() -> Self
@@ -40,9 +40,9 @@ impl<N, E: Ord+Copy> Graph<N, E>
 	}
 
 	///Gets an iterator over the nodes
-	pub fn nodes(&self) -> Vec<WeakNodeReference<N, E>>
+	pub fn nodes(&self) -> Vec<PossibleNode<N, E>>
 	{
-		self.vertices.iter().map(|x| Rc::downgrade(x)).collect()
+		self.vertices.iter().map(|x| PossibleNode(Rc::downgrade(x))).collect()
 	}
 
 	//mutable iterator over the nodes??
@@ -50,11 +50,11 @@ impl<N, E: Ord+Copy> Graph<N, E>
 	///Gets an iterator of the neighbors of a node
 	///`Ok` if the node exists
 	///`Err` if it doesn't exist anymore
-	pub fn neighbors(&self, node: &WeakNodeReference<N, E>) -> Result<Vec<WeakNodeReference<N, E>>,()>
+	pub fn neighbors(&self, node: &PossibleNode<N, E>) -> Result<Vec<PossibleNode<N, E>>,()>
 	{
-		match node.upgrade()
+		match node.0.upgrade()
 		{
-			Some(strong_node)	=> Ok((*strong_node).borrow().edges.iter().map(|x| Rc::downgrade(&x.node)).collect()),
+			Some(strong_node)	=> Ok((*strong_node).borrow().edges.iter().map(|x| PossibleNode(Rc::downgrade(&x.node))).collect()),
 			None 				=> Err(())
 		}
 	}
@@ -64,13 +64,13 @@ impl<N, E: Ord+Copy> Graph<N, E>
 	///Ensures no || edges
 	///`Ok` if the edge was created normally
 	///`Err` if the edge already existed or if the node doesn't exist anymore
-	pub fn create_edge(&mut self, from: &WeakNodeReference<N, E>, to: &WeakNodeReference<N, E>, weight: E) -> Result<(), ()>
+	pub fn create_edge(&mut self, from: &PossibleNode<N, E>, to: &PossibleNode<N, E>, weight: E) -> Result<(), ()>
 	{
-		match from.upgrade().and_then(|strong_from|
-			to.upgrade().and_then(|strong_to|
+		match from.0.upgrade().and_then(|strong_from|
+			to.0.upgrade().and_then(|strong_to|
 			{
 				//Create an edge
-				let edge = Edge::<N, E>{node: strong_to.clone(), weight: weight};
+				let edge = Edge::<N, E>{node: strong_to.clone(), weight: weight.clone()};
 				let mut from_ref = strong_from.borrow_mut();
 
 				//filter out all eddges already existing to to
@@ -94,13 +94,13 @@ impl<N, E: Ord+Copy> Graph<N, E>
 	///with `delete_edge_undirected`
 	///`Ok` if the edge was created normally
 	///`Err` if the edge already existed or if either node doesn't exist anymore
-	pub fn create_edge_undirected(&mut self, from: &WeakNodeReference<N, E>, to: &WeakNodeReference<N, E>, weight: E) -> Result<(), ()>
+	pub fn create_edge_undirected(&mut self, from: &PossibleNode<N, E>, to: &PossibleNode<N, E>, weight: E) -> Result<(), ()>
 	{
-		match from.upgrade().and_then(|strong_from|
-			to.upgrade().and_then(|strong_to|
+		match from.0.upgrade().and_then(|strong_from|
+			to.0.upgrade().and_then(|strong_to|
 			{
-				let to_edge = Edge::<N, E>{node: strong_to.clone(), weight: weight};
-				let from_edge = Edge::<N, E>{node: strong_from.clone(), weight: weight};
+				let to_edge = Edge::<N, E>{node: strong_to.clone(), weight: weight.clone()};
+				let from_edge = Edge::<N, E>{node: strong_from.clone(), weight: weight.clone()};
 				let mut from_ref = strong_from.borrow_mut();
 				let mut to_ref = strong_to.borrow_mut();
 
@@ -120,7 +120,7 @@ impl<N, E: Ord+Copy> Graph<N, E>
 	}
 
 	///Creates a node
-	pub fn create_node(&mut self, data: N) -> WeakNodeReference<N, E>
+	pub fn create_node(&mut self, data: N) -> PossibleNode<N, E>
 	{
 		//node with an empty edge list
 		let node = Node::<N, E>{data: data, edges: vec!()};
@@ -132,16 +132,16 @@ impl<N, E: Ord+Copy> Graph<N, E>
 		self.vertices.push(node_ref.clone());
 
 		//give the user back a weak to it
-		Rc::downgrade(&node_ref)
+		PossibleNode(Rc::downgrade(&node_ref))
 	}
 
 	///Deletes a directed edge that points from the specified node to another
 	///`Ok` if the edge was deleted normally or if the edge didn't exist
 	///`Err` if either node doesn't exist anymore
-	pub fn delete_edge(&mut self, from: &WeakNodeReference<N, E>, to: &WeakNodeReference<N, E>) -> Result<(), ()>
+	pub fn delete_edge(&mut self, from: &PossibleNode<N, E>, to: &PossibleNode<N, E>) -> Result<(), ()>
 	{
-		match from.upgrade().and_then(|strong_from|
-			to.upgrade().and_then(|strong_to|
+		match from.0.upgrade().and_then(|strong_from|
+			to.0.upgrade().and_then(|strong_to|
 			{
 				strong_from.borrow_mut().edges.retain(|x| !Rc::ptr_eq(&x.node, &strong_to));
 				Some(())
@@ -158,57 +158,44 @@ impl<N, E: Ord+Copy> Graph<N, E>
 	///because it assumes that they are two unrelated undirected edges
 	///`Ok` if the edges were deleted normally or if the edge didn't exist
 	///`Err` if their weights were different, or if either node doesn't exist anymore
-	pub fn delete_edge_undirected(&mut self, from: &WeakNodeReference<N, E>, to: &WeakNodeReference<N, E>) -> Result<(), ()>
+	pub fn delete_edge_undirected(&mut self, from: &PossibleNode<N, E>, to: &PossibleNode<N, E>) -> Result<(), ()>
 	{
-		match from.upgrade().and_then(|strong_from|
-			to.upgrade().and_then(|strong_to|
-			{
-				let mut to_ref = strong_to.borrow_mut();
-				let mut from_ref = strong_from.borrow_mut();
+		let strong_from = try!(from.0.upgrade().ok_or(()));
+        let strong_to = try!(to.0.upgrade().ok_or(()));
+        let mut to_ref = strong_to.borrow_mut();
+        let mut from_ref = strong_from.borrow_mut();
 
-				match to_ref.edges.into_iter()
-					.find(|x| Rc::ptr_eq(&x.node,&strong_from))
-					.and_then(|to_edge| 
-                        {
-                            from_ref.edges.into_iter()
-                            .find(|x| Rc::ptr_eq(&x.node, &strong_to) && x.weight == to_edge.weight)
-                            .and_then(|from_edge|
-                                {
-                                    to_ref.edges.retain(|x| !Rc::ptr_eq(&x.node, &strong_from));
-                                    from_ref.edges.retain(|x| !Rc::ptr_eq(&x.node, &strong_to));
-                                    Some(())
-                                }
-                            )
-                        }
-					)
-				{
-					Some(_)	=> {
-                                strong_from.borrow_mut().edges.retain(|x| !Rc::ptr_eq(&x.node, &strong_to));
-                                Some(())
-                                },
-					None	=> None
-				}
-			}
-			))
-		{
-			Some(_) => Ok(()),
-			None	=> Err(())
-		}
+        let to_edge_weight = try!(to_ref.edges.iter()
+            .find(|x| Rc::ptr_eq(&x.node,&strong_from))
+            .and_then(|to_edge| Some(to_edge.weight.clone())).ok_or(()));
+        let from_edge_weight = try!(from_ref.edges.iter()
+            .find(|x| Rc::ptr_eq(&x.node,&strong_to))
+            .and_then(|from_edge| Some(from_edge.weight.clone())).ok_or(()));
+        if to_edge_weight == from_edge_weight
+        {
+            to_ref.edges.retain(|x| !Rc::ptr_eq(&x.node, &strong_from));
+            from_ref.edges.retain(|x| !Rc::ptr_eq(&x.node, &strong_to));
+            Ok(())
+        }
+        else 
+        {
+            Err(())
+        }
 	}
 
 	///Deletes a node
 	///`Ok` if the node was deleted normally
 	///`Err` if the node doesn't exist anymore
-	pub fn delete_node(&mut self, node: WeakNodeReference <N, E>) -> Result<(), ()>
+	pub fn delete_node(&mut self, node: PossibleNode <N, E>) -> Result<(), ()>
 	{
 		//get iterator over the neighbors
 		match self.neighbors(&node)
 		{
 			Ok(collection)	=> {
 							//delete all edges from each neighbor
-							collection.into_iter().map(|x| self.delete_edge(&x, &node));
+							collection.into_iter().map(|x| self.delete_edge(&x, &node)).count();
 							//delete the node
-							match node.upgrade()
+							match node.0.upgrade()
 								.and_then(|strong_node|
                                     {
                                         self.vertices.retain(|x| !Rc::ptr_eq(&x, &strong_node));
@@ -227,45 +214,57 @@ impl<N, E: Ord+Copy> Graph<N, E>
 	///Checks if a node still exists
 	///`true` if the node is still in the graph
 	///`false` if it has been deleted
-	pub fn check_node(&self, node: &WeakNodeReference<N, E>) -> bool
+	pub fn check_node(&self, node: &PossibleNode<N, E>) -> bool
 	{
-		match node.upgrade()
+		match node.0.upgrade()
 		{
-			Some(strong_node) => true,
+			Some(_) => true,
 			None => false
 		}
 	}
 
-	///Immutably borrows the data of a node
-	pub fn get_node(&self, node: &WeakNodeReference<N, E>) -> Result<&N, ()>
+	///Maps a function on the data of a node. Not allowed to change the data.
+	pub fn map_node<F, R>(&self, node: &PossibleNode<N, E>, func: F) -> Result<R,()>
+        where F: FnOnce(&N) -> R
 	{
-		match node.upgrade()
+		match node.0.upgrade()
 		{
-			Some(strong_node) => Ok(&(*strong_node).borrow().data),
+			Some(strong_node) => Ok(func(&(*strong_node).borrow().data)),
 			None => Err(())
 		}
 	}
 
-	///Mutably borrows the data of a node
-	pub fn get_node_mut(&self, node: &WeakNodeReference<N, E>) -> Result<&mut N, ()>
+	///Maps a function on the data of a node. Allowed to change the data.
+	pub fn map_node_mut<F, R>(&self, node: &PossibleNode<N, E>, func: F) -> Result<R,()>
+        where F: FnOnce(&mut N) -> R
 	{
-		match node.upgrade()
+		match node.0.upgrade()
 		{
-			Some(strong_node) => Ok(&mut strong_node.borrow_mut().data),
+			Some(strong_node) => Ok(func(&mut (*strong_node).borrow_mut().data)),
 			None => Err(())
 		}
 	}
 
-	//Immutably borrows the weight of an edge
-	pub fn get_edge(&self, from: &WeakNodeReference<N, E>, to: &WeakNodeReference<N, E>) -> Result<&E, ()>
+	///Replaces the data of a node with new data and returns the old data
+	pub fn replace_node(&self, node: &PossibleNode<N, E>, node_data: N) -> Result<N,()>
 	{
-		match from.upgrade().and_then(|strong_from|
-			to.upgrade().and_then(|strong_to|
+		match node.0.upgrade()
+		{
+			Some(strong_node) => Ok(mem::replace(&mut (*strong_node).borrow_mut().data, node_data)),
+			None => Err(())
+		}
+	}
+
+	//Returns the weight of an edge
+	pub fn get_edge(&self, from: &PossibleNode<N, E>, to: &PossibleNode<N, E>) -> Result<E, ()>
+	{
+		match from.0.upgrade().and_then(|strong_from|
+			to.0.upgrade().and_then(|strong_to|
 			{
 				//the first edge in from's edge list that points to to
-				match strong_from.borrow_mut().edges.into_iter().find(|x| Rc::ptr_eq(&x.node, &strong_to))
+				match strong_from.borrow_mut().edges.iter().find(|x| Rc::ptr_eq(&x.node, &strong_to))
 				{
-					Some(edge)	=> Some(&edge.weight),
+					Some(edge)	=> Some(edge.weight.clone()),
 					None 		=> None
 				}
 			}
@@ -276,31 +275,23 @@ impl<N, E: Ord+Copy> Graph<N, E>
 		}
 	}
 
-	///Mutably borrows the weight of an edge
-	pub fn get_edge_mut(&self, from: &WeakNodeReference<N, E>, to: &WeakNodeReference<N, E>) -> Result<&mut E, ()>
+	//Maps a function onto the weight of an edge. Allowed to change the weight.
+	pub fn map_edge_mut<F, R>(&self, from: &PossibleNode<N, E>, to: &PossibleNode<N, E>, func: F) -> Result<R,()>
+        where F: FnOnce(&mut E) -> R
 	{
-		match from.upgrade().and_then(|strong_from|
-			to.upgrade().and_then(|strong_to|
-			{
-				//the first edge in from's edge list that points to to
-				match strong_from.borrow_mut().edges.into_iter().find(|x| Rc::ptr_eq(&x.node, &strong_to))
-				{
-					Some(edge)	=> Some(&mut edge.weight),
-					None 		=> None
-				}
-			}
-			))
-		{
-			Some(edge_weight) => Ok(edge_weight),
-			None	=> Err(())
-		}
+		let strong_from = try!(from.0.upgrade().ok_or(()));
+		let strong_to = try!(to.0.upgrade().ok_or(()));
+        
+        let mut borrowed_from = strong_from.borrow_mut();
+        
+		borrowed_from.edges.iter_mut().find(|x| Rc::ptr_eq(&x.node, &strong_to)).map(|x| func(&mut x.weight)).ok_or(())
 	}
 
 	///Dijkstra's shortest-path algorithm
 	///Returns a list of node indices. Traversing along edges to these
 	///nodes in order from the starting edge is the shortest path from
 	///the start node to the end node
-	pub fn dijkstras(&self, from: &WeakNodeReference<N, E>, to: &WeakNodeReference<N, E>) -> Vec<WeakNodeReference<N, E>>
+	pub fn dijkstras(&self, from: &PossibleNode<N, E>, to: &PossibleNode<N, E>) -> Vec<PossibleNode<N, E>>
 	{
 		unimplemented!()
 	}
