@@ -251,7 +251,7 @@ impl<V, E: Clone + Copy + PartialEq> Graph<V, E> {
 
     /// Returns the adjacency matrix for the given graph.
     #[allow(unused_variables)]
-    pub fn get_adjacency_matrix(&self) -> Vec<usize> {
+    pub fn get_adjacency_matrix(&self) -> Vec<isize> {
         let size = Graph::num_vertices(self);
         let at = |r: usize, c: usize| r * size + c;
         let mut matrix = vec![0; size * size];
@@ -266,8 +266,18 @@ impl<V, E: Clone + Copy + PartialEq> Graph<V, E> {
 
     /// Returns the Laplacian matrix for the given graph.
     #[allow(unused_variables)]
-    pub fn get_laplacian(&self) -> Vec<Vec<isize> > {
-        Vec::new()
+    pub fn get_laplacian(&self) -> Vec<isize> {
+        let size = Graph::num_vertices(self);
+        let mut adj = Graph::get_adjacency_matrix(self);
+        let at = |r: usize, c: usize| r * size + c;
+        let adj_list = self.adj_list.read().unwrap();
+        for i in 0..size {
+            adj[at(i, i)] -= adj_list[i].len() as isize;
+        }
+        for i in 0..size*size {
+            adj[i] *= -1;
+        }
+        adj
     }
 
     /// Returns the number of connected components in the graph.
