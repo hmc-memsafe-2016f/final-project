@@ -9,4 +9,3 @@ invalidated when vertices are deleted
 otherwise
 
 However, I do allow arbitrary data to be stored at the edges and vertices!
-
