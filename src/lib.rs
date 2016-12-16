@@ -365,7 +365,7 @@ pub mod pairing_heap {
 /// that takes a vertex and returns a an iterator of adjacent vertices and their weights. This
 /// allows this data structure to represent graphs where the edges are
 /// implicit (i.e. the Peteren Graph where the edges can be determined from the vertex values)
-pub struct Graph<'a, Vertex: 'a, VertIter, AdjF> {
+pub struct Graph<Vertex, VertIter, AdjF> {
 
     /// user-supplied iterator over a list of vertices
     vertices: VertIter,
@@ -375,10 +375,10 @@ pub struct Graph<'a, Vertex: 'a, VertIter, AdjF> {
     adj: AdjF,
 
     /// cache of shortest paths from given vertices
-    sp_cache: HashMap<&'a Vertex, HashMap<&'a Vertex, usize>>,
+    sp_cache: HashMap<Vertex, HashMap<Vertex, usize>>,
 
     /// cache of spanning tree, represented as adjacency list
-    st_cache: Option<Vec<Vec<&'a Vertex>>>,
+    st_cache: Option<Vec<Vec<Vertex>>>,
 }
 
 use std::cmp::Eq;
@@ -395,11 +395,11 @@ use std::hash::Hash;
 // impl parameter list but absent from the Graph parameter list). The AdjIter type
 // represents the *return type* of AdjF. We want to constrain the return type as implementing
 // `Iterator<Item=(&'a Vertex, usize)>`, and we need the helper type AdjIter for this.
-impl<'a, Vertex, VertIter, AdjIter, AdjF> Graph<'a, Vertex, VertIter, AdjF> where
-    Vertex: Eq + Hash,
-    VertIter: Iterator<Item=&'a Vertex> + Clone,
-    AdjIter: Iterator<Item=(&'a Vertex, usize)>,
-    AdjF: FnMut(&Vertex) -> AdjIter,
+impl<'a, Vertex, VertIter, AdjIter, AdjF> Graph<Vertex, VertIter, AdjF> where
+    Vertex: Eq + Hash + Copy + std::fmt::Debug,
+    VertIter: Iterator<Item=Vertex> + Clone,
+    AdjIter: Iterator<Item=(Vertex, usize)>,
+    AdjF: FnMut(Vertex) -> AdjIter,
 {
     /// Gonstruct a new, empty graph given a vertex list and an adjacency functor.
     pub fn new(iter: VertIter, f: AdjF) -> Self {
@@ -422,8 +422,8 @@ impl<'a, Vertex, VertIter, AdjIter, AdjF> Graph<'a, Vertex, VertIter, AdjF> wher
     /// The same applies to the spanning tree function.
     /// 
     /// Oh well.
-    pub fn shortest_path_len(&mut self, src: &'a Vertex, dst: &Vertex) -> usize {
-        if !self.sp_cache.contains_key(src) {
+    pub fn shortest_path_len(&mut self, src: Vertex, dst: Vertex) -> usize {
+        if !self.sp_cache.contains_key(&src) {
             let mut distances = HashMap::new();
             let mut q = pairing_heap::PairingHeap::new();
             let mut q_handles = HashMap::new();
@@ -439,23 +439,23 @@ impl<'a, Vertex, VertIter, AdjIter, AdjF> Graph<'a, Vertex, VertIter, AdjF> wher
             while let Some((dist, v)) = q.delete_min() {
                 for (neighbor, weight) in (self.adj)(v) {
                     // we onlt want to consider neighbors that are still in the queue
-                    if let Some(handle) = q_handles.get(neighbor) {
+                    if let Some(handle) = q_handles.get(&neighbor) {
 
                         // can we make a shorter path to neighbor from src through v using this
-                        // edge?
-                        let alt: usize = dist + weight;
-                        let mut old = distances.get_mut(neighbor).unwrap();
+                        // edge? (and don't overflow)
+                        let alt: usize = if dist == usize::max_value() {dist} else {dist + weight};
+                        let mut old = distances.get_mut(&neighbor).unwrap();
                         if alt < *old {
                             *old = alt;
                             q.update_key(handle, alt);
                         }
                     }
                 }
-                q_handles.remove(v);
+                q_handles.remove(&v);
             }
             self.sp_cache.insert(src, distances);
         }
-        *self.sp_cache.get(src).unwrap().get(dst).unwrap()
+        *self.sp_cache.get(&src).unwrap().get(&dst).unwrap()
     }
 
     /// Return a minimum spanning tree represented as an adjacency list.
@@ -467,7 +467,7 @@ impl<'a, Vertex, VertIter, AdjIter, AdjF> Graph<'a, Vertex, VertIter, AdjF> wher
     /// See the pesudocode in the middle of this page, and ignore the fact that the
     /// author's english is barely intelligible (they're probs ESL, so w/e):
     /// http://www.stoimen.com/blog/2012/11/19/computer-algorithms-prims-minimum-spanning-tree/
-    pub fn spanning_tree(&'a mut self) -> &'a Vec<Vec<&'a Vertex>> {
+    pub fn spanning_tree(&'a mut self) -> &'a Vec<Vec<Vertex>> {
         if !self.st_cache.is_some() {
             let mut q = pairing_heap::PairingHeap::new();
             let mut q_handles = HashMap::new();
@@ -483,27 +483,25 @@ impl<'a, Vertex, VertIter, AdjIter, AdjF> Graph<'a, Vertex, VertIter, AdjF> wher
             };
             
             // initialize the weights of the non-src vertices to "infinity"
-            let mut size = 0;
             for v in self.vertices.clone() {
                 let weight = if v == root {0} else {usize::max_value()};
                 let handle = q.insert(weight, v);
                 q_handles.insert(v, handle);
-                size += 1;
             }
 
             while let Some((dist, v)) = q.delete_min() {
                 for (neighbor, weight) in (self.adj)(v) {
                     // we onlt want to consider neighbors that are still in the queue
-                    if let Some(handle) = q_handles.get(neighbor) {
+                    if let Some(handle) = q_handles.get(&neighbor) {
                         if weight < dist {
                             // set this neighbor's parent to be v
-                            parents.remove(neighbor);
+                            parents.remove(&neighbor);
                             parents.insert(neighbor, v);
                             q.update_key(handle, weight);
                         }
                     }
                 }
-                q_handles.remove(v);
+                q_handles.remove(&v);
             }
 
             // generate the spanning tree from the parent map
@@ -515,13 +513,13 @@ impl<'a, Vertex, VertIter, AdjIter, AdjF> Graph<'a, Vertex, VertIter, AdjF> wher
             // a map from vertex values to their indicies, which is ~~annoying~~ and we alreaady
             // have about 11 thousand stupid hash maps in this code and each time I use
             // another one my soul hurts.
-            let mut tree = Vec::with_capacity(size);
-            for (i,v) in self.vertices.clone().enumerate() {
+            let mut tree = Vec::new();
+            for v in self.vertices.clone() {
                 let mut adj = Vec::new();
-                if let Some(parent) = parents.get(v) {
+                if let Some(parent) = parents.get(&v) {
                     adj.push(*parent);
                 }
-                tree[i] = adj;
+                tree.push(adj);
             }
 
             self.st_cache = Some(tree);

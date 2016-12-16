@@ -120,9 +120,10 @@ mod graph {
     use final_project;
     use petgraph;
     use petgraph::visit::EdgeRef;
+    use petgraph::graph::NodeIndex;
 
     #[test]
-    fn test_shortest_path() {
+    fn test_shortest_path_k4() {
         // K_4 with edge weights of 1, taken from petgraph docs
         let gr = petgraph::Graph::<(), usize>::from_edges(&[
             (0, 1, 1), (0, 2, 1), (0, 3, 1),
@@ -132,9 +133,70 @@ mod graph {
 
         let mut my_gr = final_project::Graph::new(gr.node_indices(),
                                                   |n| {
-                                                      gr.edges(*n).map(|e| {
+                                                      gr.edges(n).map(|e| {
                                                           (e.target(), *e.weight())
                                                       })
                                                   });
+
+        for e in gr.edge_indices() {
+            let (src, dst) = gr.edge_endpoints(e).unwrap();
+            assert_expected_eq_actual!(my_gr.shortest_path_len(src, dst), 1);
+        }
+    }
+
+    #[test]
+    fn test_shortest_path_c6() {
+        // C_6 with one heavy edge
+        let gr = petgraph::Graph::<(), usize>::from_edges(&[
+            (0, 1, 1), (1, 2, 1), (2, 3, 1), (3, 4, 1), (4, 5, 1), (5, 0, 10),
+            ]);
+
+        let mut my_gr = final_project::Graph::new(gr.node_indices(),
+                                                  |n| {
+                                                      gr.edges(n).map(|e| {
+                                                          (e.target(), *e.weight())
+                                                      })
+                                                  });
+
+        for i in 1..6 {
+            assert_expected_eq_actual!(
+                my_gr.shortest_path_len(NodeIndex::new(0), NodeIndex::new(i)), i);
+        }
+    }
+
+    #[test]
+    // ths test fails, i.e. our MST implementation does not work. 
+    fn test_mst_c6() {
+        // C_6 with one heavy edge
+        let gr = petgraph::Graph::<(), usize>::from_edges(&[
+            (0, 1, 1), (1, 2, 1), (2, 3, 1), (3, 4, 1), (4, 5, 1), (5, 0, 10),
+            ]);
+
+        let mut my_gr = final_project::Graph::new(gr.node_indices(),
+                                                  |n| {
+                                                      gr.edges(n).map(|e| {
+                                                          (e.target(), *e.weight())
+                                                      })
+                                                  });
+
+        let mst = my_gr.spanning_tree();
+        assert_expected_eq_actual!(mst.len(), 6); // we better have 6 verticies
+        let mut found_root = false;
+        for (i, adj) in (*mst).iter().enumerate() {
+            if adj.len() == 0 {
+                assert!(!found_root);
+                found_root = true;
+            } else {
+                let parent = *adj.first().unwrap();
+                if i == 5 {
+                    assert!(parent == NodeIndex::new(4));
+                } else if i == 0 {
+                    assert!(parent == NodeIndex::new(1));
+                } else {
+                    assert!(parent == NodeIndex::new((i + 1)%6)
+                        || parent == NodeIndex::new((i - 1)%6));
+                }
+            }
+        }
     }
 }
