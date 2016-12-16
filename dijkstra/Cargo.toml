@@ -1,0 +1,9 @@
+[package]
+name = "dijkstra"
+version = "0.1.0"
+authors = ["Adam Dunlap <dunlapadam@gmail.com>"]
+
+[dependencies]
+[dependencies.graph]
+path = "../graph"
+
