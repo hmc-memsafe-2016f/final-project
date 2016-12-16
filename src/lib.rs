@@ -7,7 +7,8 @@ use std::cell::RefCell;
 use std::rc::Rc;
 use std::rc::Weak;
 use std::mem;
-use std::ops::Add;
+//For Dijkstra, which is commented out...
+//use std::ops::Add;
 
 type NodeReference<N, E> = Rc<RefCell<Node<N, E>>>;
 
@@ -289,6 +290,9 @@ impl<N, E: Eq+Clone> Graph<N, E>
 	}
 }
 
+/*
+Here's a WIP implementation of Dijkstra's algorithm - we gave up when we banged our heads against the borrow checker for a few more hours...
+
 #[derive(Clone)]
 struct DijkstraEntry<N, E>
 {
@@ -297,7 +301,7 @@ struct DijkstraEntry<N, E>
     distance: Option<E>,
 }
 
-impl<N, E: Eq+Clone+Add> Graph<N, E>
+impl<N, E: PartialOrd+Eq+Clone+Add<Output=E>> Graph<N, E>
 {
 	///Dijkstra's shortest-path algorithm
 	///Returns a list of node indices. Traversing along edges to these
@@ -308,9 +312,9 @@ impl<N, E: Eq+Clone+Add> Graph<N, E>
         let strong_from = try!(from.0.upgrade().ok_or(()));
 		let strong_to = try!(to.0.upgrade().ok_or(()));
 
-        let node_vec = Vec::new();
-        let searched_nodes = Vec::new();
-        for node in self.vertices
+        let mut node_vec = Vec::new();
+        let mut searched_nodes = Vec::new();
+        for node in &self.vertices
         {
             node_vec.push(DijkstraEntry
             {
@@ -320,56 +324,56 @@ impl<N, E: Eq+Clone+Add> Graph<N, E>
             });
         }
 
-        let current_node = node_vec.iter().find(|x| Rc::ptr_eq(&x.this_node, &strong_from).unwrap();
+        let mut current_node = node_vec.iter_mut().find(|x| Rc::ptr_eq(&x.this_node, &strong_from)).unwrap();
         
         while !Rc::ptr_eq(&current_node.this_node, &strong_to)
         {
-            for weak_node in self.neighbors(current_node)
+            for weak_node in self.neighbors(&PossibleNode(Rc::downgrade(&current_node.this_node))).unwrap()
             {
                 let node = weak_node.0.upgrade().unwrap();
-                for entry in node_vec
+                for mut entry in node_vec.iter_mut()
                 {
                     if Rc::ptr_eq(&entry.this_node, &node)
                     {
-                        let alt = current_node.edges.iter().find(|x| Rc::ptr_eq(&x.node, &node)).unwrap().weight;
+                        let mut alt = current_node.this_node.borrow().edges.iter().find(|x| Rc::ptr_eq(&x.node, &node)).unwrap().weight.clone();
                         if current_node.distance.is_some()
                         {
-                            alt = alt + current_node.distance.unwrap();
+                            alt = alt + current_node.distance.unwrap().clone();
                         }
                         match entry.distance
                         {
                             None                => {
                                                     	entry.distance = Some(alt);
-                                                    	entry.previous_node = current_node.this_node.clone();
+                                                    	entry.previous_node = Some(current_node.this_node.clone());
                                                     }
-                            Some(current_dist)  => if current_dist > alt
+                            Some(ref mut current_dist)  => if *current_dist > alt
                                                     {
-                                                        current_dist = Some(alt);
-                                                        entry.previous_node = current_node.this_node.clone();
+                                                        *current_dist = alt;
+                                                        entry.previous_node = Some(current_node.this_node.clone());
                                                     }
                         }
                 	}
                 }
             }
 
-            let min_value = None;
-            let min_value_index = None;
-            for (entry in 0..node_vec.len())
+            let mut min_value = None;
+            let mut min_value_index = None;
+            for entry in 0..node_vec.len()
             {
-            	if node_vec.get(entry).distance.is_some()
+            	if node_vec.get(entry).unwrap().distance.is_some()
             	{
             		if min_value.is_some()
             		{
-            			if min_value > node_vec.get(entry).distance
+            			if min_value > node_vec.get(entry).unwrap().distance.clone()
             			{
-            				min_value = node_vec.get(entry).distance;
-            				min_value_index = entry;
+            				min_value = node_vec.get(entry).unwrap().distance.clone();
+            				min_value_index = Some(entry);
             			}
             		}
             		else
             		{
-            			min_value = node_vec.get(entry).distance;
-            			min_value_index = entry;
+            			min_value = node_vec.get(entry).unwrap().distance.clone();
+            			min_value_index = Some(entry);
             		}
             	}
             }
@@ -380,21 +384,23 @@ impl<N, E: Eq+Clone+Add> Graph<N, E>
             	return Err(());
             }
 
-            current_node = node_vec.get(min_value_index).clone();
+            current_node = node_vec.get_mut(min_value_index.unwrap()).unwrap().clone().unwrap();
 
             searched_nodes.push(current_node.clone());
 
-            node_vec.remove(min_value_index);
+            node_vec.remove(min_value_index.unwrap());
         }
 
-        let out = Vec::new();
+        let mut out = Vec::new();
 
         //now we unwrap backwards finding the previous node from the destination
         while !Rc::ptr_eq(&current_node.this_node, &strong_from)
         {
-        	out.push(current_node.this_node.clone().downgrade());
+        	out.push(PossibleNode(Rc::downgrade(&current_node.this_node)));
 
-        	current_node = searched_nodes.find(|x| Rc::ptr_eq(&current_node.previous_node, &x.this_node)).unwrap()
+        	current_node = searched_nodes.iter().find(|x| Rc::ptr_eq(&current_node.previous_node.unwrap(), &x.this_node)).unwrap()
         }
+    Ok(out)
 	}
 }
+*/
