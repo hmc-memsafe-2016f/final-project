@@ -56,9 +56,12 @@ impl<'a, V, E> Copy for VRef<'a, V, E> {
 /// Returns an EIter which iterates over the edges of a vertex
 impl<'a, V, E> VRef<'a, V, E> {
     pub fn edges(&self) -> EIter<'a, E> {
-        unimplemented!()
-        //let adj_list = self.graph.adj_list.read().unwrap();
-        //EIter { iter: adj_list[self.index].iter() }
+        //unimplemented!()
+        let adj_list: &'a Vec<LinkedList<Edge<E>>>= &self.graph.adj_list.read().unwrap();
+        unsafe {
+            let it = &adj_list[self.index].iter() as *const linked_list::Iter<'a, Edge<E>>;
+            EIter { iter: std::ptr::read(it) }
+        }
     }
 }
 
@@ -195,7 +198,7 @@ impl<V, E: Clone + Copy + PartialEq> Graph<V, E> {
     /// given value.
     #[allow(unused_variables)]
     pub fn replace_vertex(&self, v: &VRef<V, E>, value: V) -> PhantomData<V> {
-        Default::default()
+        unimplemented!()
     }
 
     /// Returns a Vec<VRef> of those neighboring the given vertex.
