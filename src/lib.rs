@@ -7,6 +7,7 @@ use std::cell::RefCell;
 use std::rc::Rc;
 use std::rc::Weak;
 use std::mem;
+use std::ops::Add;
 
 type NodeReference<N, E> = Rc<RefCell<Node<N, E>>>;
 
@@ -286,13 +287,65 @@ impl<N, E: Eq+Clone> Graph<N, E>
         
 		borrowed_from.edges.iter_mut().find(|x| Rc::ptr_eq(&x.node, &strong_to)).map(|x| func(&mut x.weight)).ok_or(())
 	}
+}
 
+struct DijkstraEntry<N, E>
+{
+    this_node: NodeReference<N,E>,
+    previous_node: Option<Box<NodeReference<N,E>>>,
+    distance: Option<E>,
+}
+
+impl<N, E: Eq+Clone+Add> Graph<N, E>
+{
 	///Dijkstra's shortest-path algorithm
 	///Returns a list of node indices. Traversing along edges to these
 	///nodes in order from the starting edge is the shortest path from
 	///the start node to the end node
-	pub fn dijkstras(&self, from: &PossibleNode<N, E>, to: &PossibleNode<N, E>) -> Vec<PossibleNode<N, E>>
+	pub fn dijkstras(&self, from: &PossibleNode<N, E>, to: &PossibleNode<N, E>) -> Result<Vec<PossibleNode<N, E>>,()>
 	{
-		unimplemented!()
+        let strong_from = try!(from.0.upgrade().ok_or(()));
+		let strong_to = try!(to.0.upgrade().ok_or(()));
+
+        let node_vec = Vec::new();
+        for node in self.vertices
+        {
+            node_vec.push(DijkstraEntry
+            {
+                this_node: node.clone(),
+                previous_node: None,
+                distance: None,
+            });
+        }
+        let current_node = strong_from.clone();
+        
+        while
+        {
+            for weak_node in self.neighbors(current_node)
+            {
+                let node = weak_node.0.upgrade().unwrap();
+                for entry in node_vec
+                {
+                    if Rc::ptr_eq(&entry.this_node, &node)
+                    {
+                        let alt = current_node.edges.iter().find(|x| Rc::ptr_eq(&x.node, &strong_to)).unwrap().weight;
+                        if current_node.distance.is_some()
+                        {
+                            alt = alt + current_node.distance.unwrap();
+                        }
+                        match entry.distance
+                        {
+                            None                => {
+                                                    entry.distance = Some(alt);
+                                                    entry.previous_node = Bow::new(current_node);
+                                                    }
+                            Some(current_dist)  => if current_dist > alt
+                                                    {
+                                                        current_dist = Some(alt);
+                                                    }
+                        }
+                    }
+            }
+        }
 	}
 }
