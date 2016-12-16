@@ -289,10 +289,11 @@ impl<N, E: Eq+Clone> Graph<N, E>
 	}
 }
 
+#[derive(Clone)]
 struct DijkstraEntry<N, E>
 {
     this_node: NodeReference<N,E>,
-    previous_node: Option<Box<NodeReference<N,E>>>,
+    previous_node: Option<NodeReference<N,E>>,
     distance: Option<E>,
 }
 
@@ -308,6 +309,7 @@ impl<N, E: Eq+Clone+Add> Graph<N, E>
 		let strong_to = try!(to.0.upgrade().ok_or(()));
 
         let node_vec = Vec::new();
+        let searched_nodes = Vec::new();
         for node in self.vertices
         {
             node_vec.push(DijkstraEntry
@@ -317,9 +319,10 @@ impl<N, E: Eq+Clone+Add> Graph<N, E>
                 distance: None,
             });
         }
-        let current_node = strong_from.clone();
+
+        let current_node = node_vec.iter().find(|x| Rc::ptr_eq(&x.this_node, &strong_from).unwrap();
         
-        while
+        while !Rc::ptr_eq(&current_node.this_node, &strong_to)
         {
             for weak_node in self.neighbors(current_node)
             {
@@ -328,7 +331,7 @@ impl<N, E: Eq+Clone+Add> Graph<N, E>
                 {
                     if Rc::ptr_eq(&entry.this_node, &node)
                     {
-                        let alt = current_node.edges.iter().find(|x| Rc::ptr_eq(&x.node, &strong_to)).unwrap().weight;
+                        let alt = current_node.edges.iter().find(|x| Rc::ptr_eq(&x.node, &node)).unwrap().weight;
                         if current_node.distance.is_some()
                         {
                             alt = alt + current_node.distance.unwrap();
@@ -336,16 +339,62 @@ impl<N, E: Eq+Clone+Add> Graph<N, E>
                         match entry.distance
                         {
                             None                => {
-                                                    entry.distance = Some(alt);
-                                                    entry.previous_node = Bow::new(current_node);
+                                                    	entry.distance = Some(alt);
+                                                    	entry.previous_node = current_node.this_node.clone();
                                                     }
                             Some(current_dist)  => if current_dist > alt
                                                     {
                                                         current_dist = Some(alt);
+                                                        entry.previous_node = current_node.this_node.clone();
                                                     }
                         }
-                    }
+                	}
+                }
             }
+
+            let min_value = None;
+            let min_value_index = None;
+            for (entry in 0..node_vec.len())
+            {
+            	if node_vec.get(entry).distance.is_some()
+            	{
+            		if min_value.is_some()
+            		{
+            			if min_value > node_vec.get(entry).distance
+            			{
+            				min_value = node_vec.get(entry).distance;
+            				min_value_index = entry;
+            			}
+            		}
+            		else
+            		{
+            			min_value = node_vec.get(entry).distance;
+            			min_value_index = entry;
+            		}
+            	}
+            }
+
+            //there's no way forward
+            if min_value.is_none()
+            {
+            	return Err(());
+            }
+
+            current_node = node_vec.get(min_value_index).clone();
+
+            searched_nodes.push(current_node.clone());
+
+            node_vec.remove(min_value_index);
+        }
+
+        let out = Vec::new();
+
+        //now we unwrap backwards finding the previous node from the destination
+        while !Rc::ptr_eq(&current_node.this_node, &strong_from)
+        {
+        	out.push(current_node.this_node.clone().downgrade());
+
+        	current_node = searched_nodes.find(|x| Rc::ptr_eq(&current_node.previous_node, &x.this_node)).unwrap()
         }
 	}
 }
