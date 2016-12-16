@@ -63,10 +63,10 @@ pub struct VIter<'a, V: 'a, E: 'a> {
     r: VRef<'a, V, E>,
 }
 
-impl<'a, V, E: Clone + Copy> Iterator for VIter<'a, V, E> {
+impl<'a, V, E: Clone + Copy + PartialEq> Iterator for VIter<'a, V, E> {
     type Item = VRef<'a, V, E>;
     fn next(&mut self) -> Option<Self::Item> {
-        if self.r.index < self.r.graph.num_vertices() {
+        if self.r.index < Graph::num_vertices(self.r.graph) {
             let old_ref = VRef{ index: self.r.index, graph: self.r.graph };
             self.r.index = self.r.index + 1;
             Some(old_ref)
@@ -101,7 +101,7 @@ impl<'a, E> Iterator for EIter<'a, E> {
 
 
 // Some functions require types V and E to have default values
-impl<'a, V: Hash + Eq + Copy + Clone, E: Default + Copy + Clone> Graph<V, E> {
+impl<'a, V: Hash + Eq + Copy + Clone, E: Default + Copy + Clone + PartialEq> Graph<V, E> {
     /// Returns an iterator that ranges over all vertices in arbitrary order.
     pub fn vertices(&'a self) -> VIter<'a, V, E> {
         VIter{ r: VRef{ index: 0, graph: &self } }
@@ -137,7 +137,7 @@ impl<'a, V: Hash + Eq + Copy + Clone, E: Default + Copy + Clone> Graph<V, E> {
     }
 }
 
-impl<V, E: Clone + Copy> Graph<V, E> {
+impl<V, E: Clone + Copy + PartialEq> Graph<V, E> {
     /// Create a new, empty graph
     pub fn new() -> Self {
         Graph{ adj_list: RwLock::new(Vec::new()) , vertices: RwLock::new(Vec::new()) }
@@ -184,37 +184,45 @@ impl<V, E: Clone + Copy> Graph<V, E> {
         Default::default()
     }
 
-    /// Returns the E which was stored between vertices v1 and v2, leaving the
-    /// value in its place, unless there was no such edge, in which case it
-    /// lets the value die and returns None.
-    #[allow(unused_variables)]
-    pub fn replace_edge(&self, v1: &VRef<V, E>, v2: &VRef<V, E>, value: E) ->
-        Option<E> {
-        None
-    }
-
     /// Returns a vector of terators neighboring the given vertex.
     #[allow(unused_variables)]
     pub fn get_neighbors(&self, v: &VRef<V, E>) -> Vec<VRef<V, E>> {
         Vec::new()
     }
 
-    /// Returns whether or not the given vertices are adjacent.
+    /// Returns whether or not there is a directed edge in both directions
+    /// with values of E which are equal
     #[allow(unused_variables)]
-    pub fn adjacent(&self, v1: &VRef<V, E>, v2: &VRef<V, E>) -> bool {
-        true
+    pub fn adjacent_undirected(&self, v1: &VRef<V, E>, v2: &VRef<V, E>) -> bool {
+        let adj_list = self.adj_list.read().unwrap();
+        for edge1 in &adj_list[v1.index] {
+            if edge1.child == v2.index {
+                for edge2 in &adj_list[v2.index] {
+                    if edge2.child == v1.index {
+                        if edge1.weight == edge2.weight {
+                            return true;
+                        }
+                    }
+                }
+            }
+        }
+        return false;
     }
 
     /// Returns the number of vertices in the graph.
     #[allow(unused_variables)]
     pub fn num_vertices(&self) -> usize {
-        0
+        self.vertices.read().unwrap().len()
     }
 
     /// Returns the number of edges in the graph.
     #[allow(unused_variables)]
     pub fn num_edges(&self) -> usize {
-        0
+        let mut edges = 0;
+        for list in self.adj_list.read().unwrap().iter() {
+            edges += list.len();
+        }
+        edges
     }
 
     /// Returns the adjacency matrix for the given graph.
