@@ -1,58 +1,147 @@
 /// Julien Chien <jchien17@cmc.edu>
 ///
 /// This is a graph data structure that uses adjacency lists
-pub struct Graph<T> {
-    adj: Vec<Edge>,
-    nodes: Vec<Node<T>>,
-    num_nodes: usize,
-    num_edges: usize
+
+use std::collections::{HashMap,HashSet};
+use std::collections::hash_map::Keys;
+use std::clone::Clone;
+
+
+extern crate rand;
+
+// /// Edges have weight w (of whatever data type!)
+#[derive(Clone, Debug)]
+pub struct Edge<T> {
+    start: usize,
+    end: usize,
+    w: T,
 }
 
-/// Edges go from node start_index to node end_index
-/// Edges have weight w
-pub struct Edge {
-    start_index: usize,
-    end_index: usize,
-    w: usize
-}
+// /// Nodes store data of type T
+// /// Nodes have an index, which is used in a Graph's adjacency list to refer to nodes
+// pub struct Node<T> {
+//     data: T,
+//     index: usize,
+// }
 
-/// Nodes store data of type T
-pub struct Node<T> {
-    data: T,
+/// Graph has an adjacency list, vector of nodes,
+/// and a boolean keeping track of whether it's directed
+///
+/// adj: a hashmap of node index number to adjacency list to keep track of edges from each node
+/// nodes: a hashmap to quickly find nodes given their index number
+pub struct Graph<N, E> {
+    adj: HashMap<usize, HashMap<usize, Edge<E>>>, //index to its own adjacency list
+    nodes: HashMap<usize, N>, //index to Node
+    directed: bool,
+    next_index: usize, //the index of the next new node
 }
 
 /// implementation of my graph
-impl<N, E> Graph<N, E> {
+impl<N, E:Clone> Graph<N, E> {
+
     /// creates a new graph
-    fn new() -> Self;
+    pub fn new(d: bool) -> Self {
+        Graph{ adj: HashMap::new(), nodes: HashMap::new(), directed: d, next_index: 0 }
+    }
 
     /// returns the number of nodes in the graph
-    fn num_nodes(&self) -> usize;
+    pub fn num_nodes(&self) -> usize {
+        self.nodes.len()
+    }
 
     /// returns the number of edges in the graph
-    fn num_edges(&self) -> usize;
+    pub fn num_edges(&self) -> usize {
+        let mut length = self.adj.iter().fold(0, |acc, (_, m)| acc + m.len());
+        if !self.directed {
+            length  /= 2; //if undirected, then every edge has two copies
+        }
+        length
+    }
 
     /// adds a node with data T into the graph
-    fn add_node(&mut self, data: T) -> usize;
+    pub fn add_node(&mut self, data: N) -> usize {
+        let index = self.next_index;
+        self.nodes.insert(index, data);
+        self.adj.insert(index, HashMap::new());
+        self.next_index = self.get_next_index();
+        index
+    }
 
-    /// adds an edge of some weight, connecting nodes start to end
-    fn add_edge(&mut self, start:usize, end:usize, weight: usize) -> usize;
+    /// adds an edge of some weight, going from nodes start to end
+    /// if graph is undirected, add_edge will add two edges, one
+    /// from start to end, and one from end to start.
+    pub fn add_edge(&mut self, start: usize, end: usize, weight: E) {
+        assert!(self.nodes.contains_key(&start), "This node does not exist!");
+        assert!(self.nodes.contains_key(&end), "This node does not exist!");
 
-    /// returns an iterator of Nodes
-    fn node_iter(&self) -> Iterator<Node<T>>;
+        self.adj.get_mut(&start).unwrap().insert(end, Edge{start:start, end:end, w:weight.clone()});
+        if !self.directed {
+            // if not directed, duplicate another edge going the opposite direction
+            self.adj.get_mut(&end).unwrap().insert(start, Edge{start:start, end:end, w:weight});
+        }
+    }
 
-    /// returns an iterator of Edges
-    fn edge_iter(&self) -> Iterator<Edge>;
+    // Returns the data at the node
+    pub fn get_node_data(&self, node_index: usize) -> &N {
+        assert!(self.nodes.contains_key(&node_index), "This node does not exist!");
 
-    ///Does Prim's algorithm on the graph
-    ///Returns a vetor of a edges that form the minimum spanning tree from Prim's algorithm
-    fn prim(&self) -> Vec<Edge>;
+        &self.nodes[&node_index]
+    }
 
-    ///Does Kruskal's algorithm on the graph
-    ///Returns a vector of edges that form the minimum spanning tree from Kruskal's algorithm
-    fn kruskal(&self) -> Vec<Edge>;
+    pub fn has_edge(&self, start: usize, end: usize) -> bool {
+        self.adj[&start].contains_key(&end)
+    }
 
+    pub fn get_edge_weight(&self, start: usize, end: usize) -> E {
+        assert!(self.has_edge(start, end), "There is no edge from {} to {}", start, end);
+        
+        self.adj[&start][&end].w.clone()
+    }
 
+    pub fn get_nodes<'a>(&'a self) -> Keys<'a, usize, N> {
+        self.nodes.keys()
+    }
+
+    pub fn get_neighbors<'a>(&'a self, node_index: usize) -> Keys<'a, usize, Edge<E>> {
+        self.adj[&node_index].keys()
+    }
+
+    pub fn random_node(&self) -> usize {
+        let num = rand::random::<(usize)>() % self.nodes.len();
+        self.nodes.keys().nth(num).unwrap().clone()
+    }
+
+    // gets the next node index number
+    fn get_next_index(&self) -> usize {
+        let mut curr = 0;
+        loop {
+            if !self.nodes.contains_key(&curr) {
+                break;
+            }
+            curr += 1;
+        }
+        curr
+    }
 }
+
+// Does Prim's algorithm on the graph
+// Returns a vetor of a edges that form the minimum spanning tree from Prim's algorithm
+pub fn prim<N, E>(g: &Graph<N, E>) -> Vec<Edge<E>> {
+    let mut included = HashSet::new();
+    let mut cost = HashMap::new();
+    let mut used_edges = vec::new();
+
+    let curr = g.random_node();
+    included.insert(curr.clone());
+
+    while included.len() != g.num_nodes() {
+        
+    } 
+    used_edges
+}
+
+// Does Kruskal's algorithm on the graph
+// Returns a vector of edges that form the minimum spanning tree from Kruskal's algorithm
+// fn kruskal(&self) -> Vec<Edge>;
 
 
