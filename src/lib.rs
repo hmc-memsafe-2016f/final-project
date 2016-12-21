@@ -32,12 +32,13 @@ pub struct Edge<T> {
 pub struct Graph<N, E> {
     adj: HashMap<usize, HashMap<usize, Edge<E>>>, //index to its own adjacency list
     nodes: HashMap<usize, N>, //index to Node
+    edges: Vec<Edge<E>>,
     directed: bool,
     next_index: usize, //the index of the next new node
 }
 
 /// implementation of my graph
-impl<N, E:Clone> Graph<N, E> {
+impl<N, E:Clone, Eq> Graph<N, E> {
 
     /// creates a new graph
     pub fn new(d: bool) -> Self {
@@ -77,8 +78,9 @@ impl<N, E:Clone> Graph<N, E> {
         self.adj.get_mut(&start).unwrap().insert(end, Edge{start:start, end:end, w:weight.clone()});
         if !self.directed {
             // if not directed, duplicate another edge going the opposite direction
-            self.adj.get_mut(&end).unwrap().insert(start, Edge{start:start, end:end, w:weight});
+            self.adj.get_mut(&end).unwrap().insert(start, Edge{start:start, end:end, w:weight.clone()});
         }
+        self.edges.push(Edge{start:start, end:end, w:weight.clone()});
     }
 
     // Returns the data at the node
@@ -100,6 +102,10 @@ impl<N, E:Clone> Graph<N, E> {
 
     pub fn get_nodes<'a>(&'a self) -> Iter<'a, usize, N> {
         self.nodes.iter()
+    }
+
+    pub fn get_edges(&self) -> &Vec<Edge<E>> {
+        &self.edges
     }
 
     pub fn get_neighbors<'a>(&'a self, node_index: usize) -> Iter<'a, usize, Edge<E>> {
@@ -126,7 +132,7 @@ impl<N, E:Clone> Graph<N, E> {
 
 // Does Prim's algorithm on the graph
 // Returns a vetor of a edges that form the minimum spanning tree from Prim's algorithm
-pub fn prim<N, E:Clone>(g: &Graph<N, E>) -> Vec<Edge<E>> {
+pub fn prim<N, E:Clone, Eq>(g: &Graph<N, E>) -> Vec<Edge<E>> {
     let mut included = HashSet::new();
     let mut cost = HashMap::new();
     let mut used_edges = Vec::new();
@@ -150,7 +156,8 @@ pub fn prim<N, E:Clone>(g: &Graph<N, E>) -> Vec<Edge<E>> {
         let next_edge;
         let next;
 
-        for (node, edge) in neighbors {
+        for (node, edge) in cost {
+            if 
             if edge.w < smallest {
                 smallest = edge.w;
                 next = node;
@@ -166,8 +173,17 @@ pub fn prim<N, E:Clone>(g: &Graph<N, E>) -> Vec<Edge<E>> {
 
 // Does Kruskal's algorithm on the graph
 // Returns a vector of edges that form the minimum spanning tree from Kruskal's algorithm
-fn kruskal<N, E:Clone>(g: &Graph<N, E>) -> Vec<Edge<E>> {
-    
+fn kruskal<N, E:Clone, Eq>(g: &Graph<N, E>) -> Vec<Edge<E>> {
+    let mut used_edges = Vec::new();
+    let mut included = HashSet::new();
+    let mut edges = g.get_edges().clone()
+    edges.sort_by(|a, b| a.cmp(b));
+    for e in &edges {
+        if !included.contains(e.start) || !included.contains(e.end) {
+            used_edges.push(e.clone());
+            included.insert(e.start.clone());
+            included.insert(e.end.clone());
+        }
+    }
+    used_edges
 }
-
-
