@@ -1,0 +1,8 @@
+[package]
+name = "prim"
+version = "0.1.0"
+authors = ["maxhoward <mhoward@hmc.edu>"]
+
+[dependencies]
+[dependencies.graph]
+path = "../graph"

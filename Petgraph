@@ -1,0 +1,39 @@
+Petgraph is a graph api that provides for 3 graph representations.
+
+Graph: which is an adjacency list.
+Stable graph: Keeps indices constant on removal.
+GraphMap: Mix of adjacency list and adjacency matrix backed by a hashmap that gives O(1) edge existence checking.
+
+The modules include
+
+modules for each representation
+algorithms such as mst, dijkstra's and ismorphism checking.
+visualization
+module for implementing graph traversals
+union find
+ways to give elements of the graph associated data.
+
+List of some cases the api can panic
+
+
+Panics if you add too many nodes(for the index type).
+
+addEdge
+Panics if any of the nodes don't exist
+Panics if the Graph is at the maximum number of edges for its index type.
+
+update
+panics if the node doesn't exist.
+
+index_twice_mut
+panics if the two indices are the same or either is invalid
+
+reserve*
+panics if you reserve enough space to overflow usize.
+
+Strengths: Things like visitable and the visit module to iterate through nodes seem really nice for implementing new algorithms.
+
+Weaknesses:  It might be nice to leverage certain algorithms without having to transform them into the given representations? Maybe you want to bfs on an image with some natural definition of adjacency without loading a multimillion node graph.
+
+As said in the documentation, graphs are represented with an adjacency list.
+
