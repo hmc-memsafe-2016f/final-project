@@ -1,0 +1,7 @@
+[package]
+name = "mygraph"
+version = "0.1.0"
+authors = ["Julien Chien <jchien17@cmc.edu>"]
+
+[dependencies]
+rand = "0.3"
